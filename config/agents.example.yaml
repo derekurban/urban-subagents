@@ -1,0 +1,18 @@
+version: 0.1
+broker:
+  execution_mode: sync
+  default_output:
+    format: text
+
+agents:
+  reviewer:
+    description: Read-only code review
+    runtime: codex_exec
+    model: gpt-5.4
+    prompt_file: prompts/reviewer.md
+
+  planner:
+    description: Generate implementation plans
+    runtime: claude_code
+    model: opus
+    prompt_file: prompts/planner.md

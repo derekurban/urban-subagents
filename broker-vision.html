@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sub-Agent Broker Spec</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #171717;
+      --muted: #5b5f57;
+      --line: #d6d9d1;
+      --accent: #174e7a;
+      --accent-soft: #eaf2f8;
+      --warn: #7a4317;
+      --warn-soft: #fbf0e7;
+      --radius: 6px;
+      --max: 1300px;
+      --shadow: 0 8px 20px rgba(17, 24, 17, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 "Segoe UI", Arial, sans-serif;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover,
+    a:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+
+    code,
+    pre {
+      font-family: Consolas, "SFMono-Regular", monospace;
+    }
+
+    .page {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 28px;
+      padding: 24px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar h1 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+      line-height: 1.3;
+    }
+
+    .sidebar p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav a {
+      display: block;
+      padding: 6px 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 1.5rem;
+      line-height: 1.25;
+    }
+
+    .section > p:first-of-type {
+      margin-top: 0;
+    }
+
+    .status {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: #f8fbfd;
+      padding: 12px 14px;
+      margin: 14px 0 0;
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .warn {
+      border-left-color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fcfcfa;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    .card p,
+    .card ul {
+      margin: 0;
+    }
+
+    .card ul {
+      padding-left: 18px;
+    }
+
+    .card li + li {
+      margin-top: 6px;
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .doc-group {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fcfcfa;
+    }
+
+    .doc-group h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .doc-group ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .doc-group li + li {
+      margin-top: 8px;
+    }
+
+    .doc-group small {
+      color: var(--muted);
+    }
+
+    .mono-block {
+      background: #131614;
+      color: #eef1eb;
+      border-radius: var(--radius);
+      padding: 16px;
+      overflow: auto;
+      border: 1px solid #262b27;
+    }
+
+    .mono-block pre {
+      margin: 0;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    .api-table {
+      display: grid;
+      gap: 12px;
+    }
+
+    .api-row {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fcfcfa;
+    }
+
+    .api-row h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .api-row p {
+      margin: 0 0 8px;
+    }
+
+    .api-row ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .field-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      background: #fcfcfa;
+    }
+
+    .field strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .ascii {
+      margin: 0;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <aside class="sidebar">
+      <h1>Sub-Agent Broker Spec</h1>
+      <p>Working draft focused on source docs, API shape, and config contract.</p>
+      <nav class="nav" aria-label="Document sections">
+        <a href="#grounding">Grounding truth docs</a>
+        <a href="#scope">What we are building</a>
+        <a href="#model">Interaction model</a>
+        <a href="#api">Delegation API</a>
+        <a href="#lifecycle">Lifecycle semantics</a>
+        <a href="#mapping">Provider mapping notes</a>
+        <a href="#config">Config shape</a>
+        <a href="#open-questions">Open questions</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <section class="section" id="grounding">
+        <span class="status">Grounding truth</span>
+        <h2>Documentation that should drive the design</h2>
+        <p>
+          This tool should be designed against the actual CLI and app-server surfaces, not against
+          assumptions. These references are the source material for the broker adapters.
+        </p>
+
+        <div class="doc-list">
+          <div class="doc-group">
+            <h3>Claude Code official docs</h3>
+            <ul>
+              <li><a href="https://code.claude.com/docs/en/overview" target="_blank" rel="noreferrer">Overview</a> <small>- product and workflow overview</small></li>
+              <li><a href="https://code.claude.com/docs/en/how-claude-code-works" target="_blank" rel="noreferrer">How Claude Code works</a> <small>- agent loop, sessions, context, tools</small></li>
+              <li><a href="https://code.claude.com/docs/en/cli-reference" target="_blank" rel="noreferrer">CLI reference</a> <small>- scripted execution flags</small></li>
+              <li><a href="https://code.claude.com/docs/en/headless" target="_blank" rel="noreferrer">Run Claude Code programmatically</a> <small>- <code>claude -p</code>, JSON output, continue, resume</small></li>
+              <li><a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noreferrer">Tools reference</a> <small>- built-in tool surface</small></li>
+              <li><a href="https://code.claude.com/docs/en/settings" target="_blank" rel="noreferrer">Settings</a> <small>- configuration and permission policy</small></li>
+              <li><a href="https://code.claude.com/docs/en/permission-modes" target="_blank" rel="noreferrer">Permission modes</a> <small>- approval behavior</small></li>
+              <li><a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noreferrer">MCP</a> <small>- custom tool integration</small></li>
+              <li><a href="https://code.claude.com/docs/en/sandboxing" target="_blank" rel="noreferrer">Sandboxing</a> <small>- execution boundary model</small></li>
+              <li><a href="https://docs.anthropic.com/en/docs/claude-code/sub-agents" target="_blank" rel="noreferrer">Sub-agents</a> <small>- native delegation behavior</small></li>
+            </ul>
+          </div>
+
+          <div class="doc-group">
+            <h3>Codex official docs</h3>
+            <ul>
+              <li><a href="https://developers.openai.com/codex/" target="_blank" rel="noreferrer">Codex docs home</a> <small>- main entry point</small></li>
+              <li><a href="https://developers.openai.com/codex/cli" target="_blank" rel="noreferrer">CLI overview</a> <small>- high level CLI behavior</small></li>
+              <li><a href="https://developers.openai.com/codex/cli/reference" target="_blank" rel="noreferrer">Command line options</a> <small>- CLI flag reference</small></li>
+              <li><a href="https://developers.openai.com/codex/noninteractive" target="_blank" rel="noreferrer">Non-interactive mode</a> <small>- automation path for one-shot runs</small></li>
+              <li><a href="https://developers.openai.com/codex/app-server" target="_blank" rel="noreferrer">App Server</a> <small>- thread and turn lifecycle for resumable work</small></li>
+              <li><a href="https://developers.openai.com/codex/config-basic" target="_blank" rel="noreferrer">Config basics</a> <small>- entry level config model</small></li>
+              <li><a href="https://developers.openai.com/codex/config-reference" target="_blank" rel="noreferrer">Config reference</a> <small>- complete config fields</small></li>
+              <li><a href="https://developers.openai.com/codex/config-sample" target="_blank" rel="noreferrer">Sample config</a> <small>- example config shapes</small></li>
+              <li><a href="https://developers.openai.com/codex/mcp" target="_blank" rel="noreferrer">MCP</a> <small>- tool/server integration</small></li>
+              <li><a href="https://developers.openai.com/codex/subagents" target="_blank" rel="noreferrer">Subagents</a> <small>- native delegation behavior</small></li>
+              <li><a href="https://developers.openai.com/codex/hooks" target="_blank" rel="noreferrer">Hooks</a> <small>- automation hooks</small></li>
+              <li><a href="https://developers.openai.com/codex/rules" target="_blank" rel="noreferrer">Rules</a> <small>- persistent repo instructions</small></li>
+              <li><a href="https://developers.openai.com/codex/guides/agents-md" target="_blank" rel="noreferrer">AGENTS.md</a> <small>- custom instructions file</small></li>
+              <li><a href="https://developers.openai.com/codex/skills" target="_blank" rel="noreferrer">Skills</a> <small>- specialized workflows</small></li>
+              <li><a href="https://developers.openai.com/codex/auth" target="_blank" rel="noreferrer">Authentication</a> <small>- auth modes</small></li>
+              <li><a href="https://developers.openai.com/codex/agent-approvals-security" target="_blank" rel="noreferrer">Agent approvals &amp; security</a> <small>- approval/security model</small></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="scope">
+        <span class="status">Scope</span>
+        <h2>What we are building</h2>
+        <p>
+          A management layer for sub-agents that delegates to existing CLIs instead of replacing them.
+          The broker should expose one stable tool surface to the parent process while mapping that
+          surface onto Claude Code or Codex underneath.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Responsibilities</h3>
+            <ul>
+              <li>Accept delegation requests from the parent process</li>
+              <li>Select a configured agent definition</li>
+              <li>Translate the request into Claude Code or Codex arguments</li>
+              <li>Track session ids, status, output, and resumable state</li>
+              <li>Return normalized results to the parent process</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>Non-goals</h3>
+            <ul>
+              <li>No direct vendor API harness</li>
+              <li>No reimplementation of auth, sandboxing, or session storage</li>
+              <li>No requirement to expose raw model names to the parent</li>
+              <li>No baked-in profile catalog in this document</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note">
+          The point is to broker delegation, not to become another agent runtime.
+        </div>
+      </section>
+
+      <section class="section" id="model">
+        <span class="status">Interaction model</span>
+        <h2>How the broker fits into the flow</h2>
+        <div class="mono-block">
+          <pre class="ascii">Parent process
+    |
+    | calls broker tool
+    v
+Sub-agent broker
+    |
+    | resolves configured agent definition
+    | applies policy and runtime mapping
+    v
+Provider adapter
+    |
+    +--> Claude Code adapter  -> claude -p / resume / MCP config / prompt flags
+    |
+    +--> Codex adapter        -> codex exec --json or app-server thread lifecycle
+    |
+    v
+Normalized session registry
+    |
+    +--> result summary
+    +--> structured output
+    +--> status / cancel hooks</pre>
+        </div>
+
+        <div class="note warn">
+          The critical split is between one-shot execution and resumable sessions. One-shot execution
+          still matters, but both products can also emit session or thread handles that make resume
+          possible. The broker should capture those handles even when it runs inline.
+        </div>
+      </section>
+
+      <section class="section" id="api">
+        <span class="status">Delegation API</span>
+        <h2>Minimal external command surface</h2>
+        <p>
+          The broker should keep the parent-facing API small. The semantics matter more than the exact
+          names, but this is a workable v1 surface.
+        </p>
+
+        <div class="api-table">
+          <div class="api-row">
+            <h3><code>list_agents</code></h3>
+            <p>Return configured agent definitions that the parent is allowed to delegate to.</p>
+            <ul>
+              <li>Purpose: discovery</li>
+              <li>Typical output: name, description, runtime, write/network policy, resumable support</li>
+            </ul>
+          </div>
+
+          <div class="api-row">
+            <h3><code>list_sessions</code></h3>
+            <p>Return broker-known sessions for the current broker session or namespace.</p>
+            <ul>
+              <li>Purpose: inspect current and recently used resumable handles</li>
+              <li>Typical output: session id, agent, runtime, provider handle, last status, created at, updated at</li>
+              <li>Recommended default scope: the current broker session, not every session on the machine</li>
+            </ul>
+          </div>
+
+          <div class="api-row">
+            <h3><code>delegate</code></h3>
+            <p>Run an agent definition either as a new session or by resuming an existing session.</p>
+            <ul>
+              <li>Purpose: start new or resume by <code>session_id</code></li>
+              <li>Typical input: agent name, prompt text, optional <code>session_id</code>, cwd, context, constraints</li>
+              <li>Typical output: session id, status, runtime metadata, provider handle, result</li>
+            </ul>
+          </div>
+
+          <div class="api-row">
+            <h3><code>cancel</code> <small>(optional)</small></h3>
+            <p>Request interruption for an in-flight session when the runtime or wrapper can stop it.</p>
+            <ul>
+              <li>Purpose: stop an in-flight run early</li>
+              <li>Typical input: session id, optional reason</li>
+              <li>Typical output: cancellation requested state for that session</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="mono-block">
+            <pre>{
+  "tool": "delegate",
+  "agent": "reviewer",
+  "prompt": "Review the auth patch for race conditions and session bugs.",
+  "cwd": "D:/repo/app",
+  "context": {
+    "files": ["src/auth/session.ts", "src/auth/token.ts"],
+    "notes": "Read-only. Findings first."
+  }
+}</pre>
+          </div>
+
+          <div class="mono-block">
+            <pre>{
+  "tool": "delegate",
+  "agent": "reviewer",
+  "session_id": "sess_018",
+  "prompt": "Narrow this to exploitable issues only."
+}</pre>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="mono-block">
+            <pre>{
+  "tool": "list_sessions"
+}</pre>
+          </div>
+
+          <div class="mono-block">
+            <pre>{
+  "tool": "cancel",
+  "session_id": "sess_018",
+  "reason": "No longer needed"
+}</pre>
+          </div>
+        </div>
+
+        <div class="note">
+          This is a sync-first API. In the normal case, <code>delegate</code> runs inline and returns
+          when the CLI run finishes. That means a separate <code>wait</code> tool is not part of the
+          core surface. If detached execution is added later, <code>wait</code> can be added as an
+          extension without changing the session model.
+        </div>
+      </section>
+
+      <section class="section" id="lifecycle">
+        <span class="status">Lifecycle semantics</span>
+        <h2>What a session means in this broker</h2>
+        <p>
+          The broker should normalize around sessions, not tasks. Each <code>delegate</code> call
+          either creates a fresh session or resumes an existing one by <code>session_id</code>.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Recommended session states</h3>
+            <ul>
+              <li><code>running</code></li>
+              <li><code>idle</code></li>
+              <li><code>completed</code></li>
+              <li><code>failed</code></li>
+              <li><code>interrupted</code></li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>Recommended invariants</h3>
+            <ul>
+              <li>No separate <code>followup</code> tool; resume is another <code>delegate</code> call</li>
+              <li>No core <code>wait</code> tool in sync-first mode</li>
+              <li><code>delegate</code> without <code>session_id</code> creates a fresh session</li>
+              <li><code>delegate</code> with <code>session_id</code> resumes the same logical conversation</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 16px;">
+          <div class="card">
+            <h3>Inline execution</h3>
+            <p>
+              The default mode. <code>delegate</code> blocks until the underlying CLI run exits and
+              returns the result together with the broker session id and provider handle.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3><code>cancel</code></h3>
+            <p>
+              Useful only while a run is in flight. In sync mode this usually means the broker or host
+              terminates the underlying subprocess or invokes a documented interrupt primitive.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>Resume</h3>
+            <p>
+              A new <code>delegate</code> call with the same <code>session_id</code>. This is how
+              “follow-up” works without requiring another top-level tool.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card">
+            <h3>One-shot runtime policy</h3>
+            <ul>
+              <li>Examples: <code>claude -p</code>, <code>codex exec --json</code></li>
+              <li>The current run finishes when the subprocess exits</li>
+              <li>The broker still captures any session or thread handle emitted by the backend</li>
+              <li><code>cancel</code> means terminate the subprocess and update session state locally</li>
+              <li>Cleanup is simple: do not keep idle child processes alive after completion</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>Resumable runtime policy</h3>
+            <ul>
+              <li>Examples: Claude session resume flow, Codex app-server threads</li>
+              <li>The logical session can outlive a single process invocation</li>
+              <li><code>cancel</code> should map to the runtime’s interruption primitive where one exists</li>
+              <li>Resume means another <code>delegate</code> call against the same session id</li>
+              <li>Cleanup becomes a retention question: keep the resumable handle for later or expire it after a configured window</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note">
+          Default recommendation: keep the API synchronous, capture backend session handles, and avoid
+          background workers until there is a real need for detached execution.
+        </div>
+      </section>
+
+      <section class="section" id="mapping">
+        <span class="status">Provider mapping notes</span>
+        <h2>How the broker API maps onto Claude Code and Codex</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Claude Code adapter</h3>
+            <ul>
+              <li><code>delegate</code> maps naturally to <code>claude -p</code> with <code>--output-format json</code></li>
+              <li>Model and effort map to <code>--model</code> and <code>--effort</code></li>
+              <li>Prompt injection maps to <code>--system-prompt-file</code> or <code>--append-system-prompt-file</code></li>
+              <li>Tool exposure maps to <code>--tools</code>, <code>--allowedTools</code>, and <code>--disallowedTools</code></li>
+              <li>Broker-hosted tools map through <code>--mcp-config</code></li>
+              <li>Official docs support resume through <code>--continue</code> or <code>--resume &lt;session_id&gt;</code> for <code>claude -p</code> runs</li>
+              <li>That means the broker can capture the returned session id and treat the next resume as another <code>delegate</code> call</li>
+              <li>Official docs do not describe an in-band cancel primitive for headless <code>claude -p</code>; broker cancel should therefore terminate the subprocess and mark the session locally</li>
+              <li>Claude's tool docs do document <code>TaskStop</code> for killing a running background task by ID, but that belongs to Claude's native task system rather than the broker contract</li>
+              <li>Native <code>Agent</code> can be denied so the parent uses the broker instead</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>Codex adapter</h3>
+            <ul>
+              <li><code>delegate</code> maps cleanly to <code>codex exec --json</code> for one-shot tasks</li>
+              <li>Model selection maps to <code>--model</code> or config profile resolution</li>
+              <li>Reasoning maps to config overrides like <code>model_reasoning_effort</code></li>
+              <li>Developer instructions can map to config-level instruction fields</li>
+              <li>Official docs support non-interactive continuation via <code>codex exec resume --last</code> or <code>codex exec resume &lt;SESSION_ID&gt;</code></li>
+              <li>That means the broker can treat resume as another <code>delegate</code> call with the same session id</li>
+              <li>App-server gives thread lifecycle via <code>thread/start</code>, <code>thread/resume</code>, <code>thread/fork</code>, and <code>turn/start</code></li>
+              <li>App-server documents a real interruption primitive: <code>turn/interrupt</code>, which ends the turn as <code>interrupted</code></li>
+              <li>Dynamic tools and approvals are available if the broker later needs a richer runtime contract</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note">
+          Practical rule: use the simplest adapter that can satisfy the requested lifecycle. Use
+          inline CLI execution by default. Capture the provider session handle every time. Only move
+          to a persistent session backend when inline resume or interruption stops being sufficient.
+        </div>
+      </section>
+
+      <section class="section" id="config">
+        <span class="status">Config shape</span>
+        <h2>Example configuration for the delegation layer</h2>
+        <p>
+          This is not a profile catalog. It is the contract for describing available delegated
+          agents and the runtimes they map to.
+        </p>
+
+        <div class="mono-block">
+          <pre>version: 0.1
+
+broker:
+  scope_mode: session
+  retain_sessions_for: 24h
+  execution_mode: sync
+  default_output:
+    format: text
+
+runtimes:
+  claude_code:
+    command: claude
+    launch:
+      mode: print
+      base_args: ["-p", "--output-format", "json"]
+    supports:
+      resume: true
+      interrupt: process_terminate
+      write_control: true
+
+  codex_exec:
+    command: codex
+    launch:
+      mode: exec
+      base_args: ["exec", "--json"]
+    supports:
+      resume: true
+      interrupt: process_terminate
+      write_control: true
+
+  codex_app_server:
+    command: codex
+    launch:
+      mode: app_server
+    supports:
+      resume: true
+      interrupt: turn_interrupt
+      write_control: true
+
+agents:
+  reviewer:
+    description: Review code for bugs and regressions
+    runtime: codex_exec
+    model: gpt-5.4
+    reasoning_effort: high
+    prompt_file: prompts/reviewer.md
+    permissions:
+      writes: false
+      network: false
+    cwd_policy: explicit
+    session_policy: new_or_resume
+    output:
+      format: text
+
+  planner:
+    description: Build implementation or migration plans
+    runtime: claude_code
+    model: opus
+    effort: high
+    prompt_file: prompts/planner.md
+    permissions:
+      writes: false
+      network: false
+    cwd_policy: explicit
+    session_policy: new_or_resume
+    output:
+      format: json_schema
+      schema_file: schemas/plan-result.json
+
+  long_review:
+    description: Resumable review session
+    runtime: codex_app_server
+    model: gpt-5.4
+    reasoning_effort: high
+    prompt_file: prompts/reviewer.md
+    permissions:
+      writes: false
+      network: false
+    session_policy: resumable
+    output:
+      format: text</pre>
+        </div>
+
+        <div class="field-list" style="margin-top: 16px;">
+          <div class="field">
+            <strong><code>broker.scope_mode</code></strong>
+            Recommended default is session scope. The broker should list sessions for the current broker session or namespace, not every session on the machine.
+          </div>
+          <div class="field">
+            <strong><code>broker.retain_sessions_for</code></strong>
+            Controls how long finished session metadata remains available for inspection, resume, or debugging after the child process exits.
+          </div>
+          <div class="field">
+            <strong><code>broker.execution_mode</code></strong>
+            Recommended default is <code>sync</code>. In this mode <code>delegate</code> runs inline and returns when the CLI run finishes.
+          </div>
+          <div class="field">
+            <strong><code>runtimes.*</code></strong>
+            Defines the backend launch method. This is where provider-specific mechanics live.
+          </div>
+          <div class="field">
+            <strong><code>agents.*</code></strong>
+            Defines a delegatable worker. This is what the parent process should see and choose from.
+          </div>
+          <div class="field">
+            <strong><code>model</code> / <code>effort</code> / <code>reasoning_effort</code></strong>
+            These stay in config and get translated by the adapter. They do not need to be exposed in the normal parent API.
+          </div>
+          <div class="field">
+            <strong><code>prompt_file</code></strong>
+            The broker owns prompt packs and maps them to each provider's instruction surface.
+          </div>
+          <div class="field">
+            <strong><code>session_policy</code></strong>
+            Controls whether an agent definition always starts fresh, always expects resume, or allows both new and resumed sessions.
+          </div>
+          <div class="field">
+            <strong><code>permissions</code></strong>
+            Declares writes and network policy at the agent-definition level so the broker can enforce them before launch.
+          </div>
+          <div class="field">
+            <strong><code>output</code></strong>
+            Default recommendation is plain text because it is easiest for the orchestrator to read and reason over. Use a JSON schema only when downstream automation needs stable fields.
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="open-questions">
+        <span class="status">Open questions</span>
+        <h2>What still needs to be decided</h2>
+        <div class="grid-3">
+          <div class="card">
+            <h3>Session registry shape</h3>
+            <p>Should <code>list_sessions</code> expose only broker session ids, or should it also surface provider session/thread ids for debugging?</p>
+          </div>
+          <div class="card">
+            <h3>Cancel scope</h3>
+            <p>Should <code>cancel</code> be part of the core API from day one, or only added once detached or long-running execution proves necessary?</p>
+          </div>
+          <div class="card">
+            <h3>Output contract strictness</h3>
+            <p>How often will plain text be enough, and when is JSON schema worth the extra coordination cost?</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

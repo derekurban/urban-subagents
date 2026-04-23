@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+
+.urban-subagents/
+.claude/
+.mcp.json
+
+.DS_Store
+Thumbs.db
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

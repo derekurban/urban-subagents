@@ -1,0 +1,8 @@
+{
+  "name": "urban-subagents",
+  "version": "0.1.0",
+  "description": "Unified MCP broker for Claude Code and Codex subagent delegation.",
+  "author": {
+    "name": "urban-subagents"
+  }
+}

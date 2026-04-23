@@ -1,0 +1,68 @@
+{
+  "name": "urban-subagents",
+  "version": "0.1.0",
+  "description": "Cross-provider sub-agent broker for Claude Code and Codex.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/derekurban/urban-subagents.git"
+  },
+  "type": "module",
+  "bin": {
+    "agent-broker": "./dist/cli/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "plugin",
+    "config",
+    "prompts",
+    "schemas",
+    "README.md",
+    "IMPLEMENTATION_PLAN.md",
+    "CURRENT_CONTEXT.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run tests/integration",
+    "test:acceptance": "cross-env RUN_REAL_ACCEPTANCE=1 vitest run -c vitest.acceptance.config.ts",
+    "test:acceptance:claude": "cross-env RUN_REAL_ACCEPTANCE=1 RUN_REAL_CLAUDE=1 vitest run -c vitest.acceptance.config.ts",
+    "test:acceptance:codex": "cross-env RUN_REAL_ACCEPTANCE=1 RUN_REAL_CODEX=1 vitest run -c vitest.acceptance.config.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "claude",
+    "codex",
+    "mcp",
+    "broker",
+    "subagents"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.9.0",
+    "commander": "^14.0.3",
+    "cross-spawn": "^7.0.6",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^25.6.0",
+    "cross-env": "^10.1.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}
