@@ -49,7 +49,8 @@ function ensureManagedDirectories(cwd: string): void {
     statePaths.outputsDir,
     statePaths.promptsDir,
     statePaths.codexHomeDir,
-    statePaths.claudeProjectDir,
+    statePaths.claudeHomeDir,
+    path.dirname(statePaths.claudeUserConfigPath),
     path.dirname(statePaths.projectConfigPath)
   ]) {
     fs.mkdirSync(target, { recursive: true });
@@ -139,30 +140,30 @@ export async function runInit(options: InitOptions = {}): Promise<string[]> {
   const writes: PlannedWrite[] = [];
 
   if (host === "all" || host === "claude") {
-    const existingSettings = fs.existsSync(statePaths.claudeProjectSettingsPath)
-      ? JSON.parse(fs.readFileSync(statePaths.claudeProjectSettingsPath, "utf8")) as Record<string, unknown>
+    const existingSettings = fs.existsSync(statePaths.claudeUserSettingsPath)
+      ? JSON.parse(fs.readFileSync(statePaths.claudeUserSettingsPath, "utf8")) as Record<string, unknown>
       : {};
     const nextSettings = mergeClaudeSettings(existingSettings, hookCommand);
-    const existingInstructions = fs.existsSync(statePaths.claudeProjectInstructionsPath)
-      ? fs.readFileSync(statePaths.claudeProjectInstructionsPath, "utf8")
+    const existingInstructions = fs.existsSync(statePaths.claudeUserInstructionsPath)
+      ? fs.readFileSync(statePaths.claudeUserInstructionsPath, "utf8")
       : "";
     const nextInstructions = mergeClaudeInstructions(existingInstructions);
 
-    const existingMcp = fs.existsSync(statePaths.claudeProjectMcpPath)
-      ? JSON.parse(fs.readFileSync(statePaths.claudeProjectMcpPath, "utf8")) as Record<string, unknown>
+    const existingMcp = fs.existsSync(statePaths.claudeUserConfigPath)
+      ? JSON.parse(fs.readFileSync(statePaths.claudeUserConfigPath, "utf8")) as Record<string, unknown>
       : {};
     const nextMcp = mergeClaudeMcpConfig(existingMcp as never, claudeLaunch);
 
     writes.push({
-      target: statePaths.claudeProjectSettingsPath,
+      target: statePaths.claudeUserSettingsPath,
       content: JSON.stringify(nextSettings, null, 2) + "\n"
     });
     writes.push({
-      target: statePaths.claudeProjectInstructionsPath,
+      target: statePaths.claudeUserInstructionsPath,
       content: nextInstructions
     });
     writes.push({
-      target: statePaths.claudeProjectMcpPath,
+      target: statePaths.claudeUserConfigPath,
       content: JSON.stringify(nextMcp, null, 2) + "\n"
     });
   }

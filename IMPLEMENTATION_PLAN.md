@@ -90,7 +90,7 @@ urban-subagents/
 │   │   └── schema.sql            # tables + indices
 │   │
 │   ├── install/
-│   │   ├── claude.ts             # writes .claude/settings.json + .claude/CLAUDE.md + .mcp.json idempotently
+│   │   ├── claude.ts             # writes ~/.claude/settings.json + ~/.claude/CLAUDE.md + ~/.claude.json idempotently
 │   │   ├── codex.ts              # writes ~/.codex/config.toml + hooks.json
 │   │   ├── detect.ts             # locates binaries, current configs, plugin state
 │   │   └── backup.ts             # timestamped backups before any write
@@ -297,7 +297,7 @@ Notably absent: no automatic prune command. Data is kept indefinitely; `reset` i
 
 ### Claude Code
 
-Written to `.claude/settings.json` (project scope by default, `--user` flag for user scope):
+Written to `~/.claude/settings.json` (user scope):
 
 ```json
 {
@@ -334,7 +334,7 @@ The hook (`block-native-agent.mjs`) remains a best-effort backstop. It reads std
 
 In practice, current interactive Claude behavior is more reliable when steering comes from managed project instructions instead of relying on the native `Agent` tool to be visible and interceptable. The enforced kill switch remains `permissions.deny`.
 
-Written to `.claude/CLAUDE.md`:
+Written to `~/.claude/CLAUDE.md`:
 
 ```markdown
 <!-- urban-subagents -->
@@ -351,7 +351,7 @@ Do not treat `TaskCreate`, `TaskGet`, `TaskList`, `TaskOutput`, `TaskStop`, or `
 <!-- /urban-subagents -->
 ```
 
-**MCP registration** via `.mcp.json` at project root (what the plugin bundles) or via `claude mcp add --transport stdio --scope user urban-subagents -- agent-broker serve-mcp --host-runtime claude` (what the CLI runs for non-plugin installs).
+**MCP registration** via `~/.claude.json` under `mcpServers.urban-subagents` for the CLI-managed user-scope install, or via `claude mcp add --transport stdio --scope user urban-subagents -- agent-broker serve-mcp --host-runtime claude` if the user wants Claude itself to manage that entry.
 
 ### Codex CLI
 
@@ -412,10 +412,10 @@ When the broker spawns a Claude or Codex child (via `delegate`), the child itsel
 
 ## Install Flow (`agent-broker init`)
 
-1. **Detect** — locate `claude` and `codex` binaries, read existing `.claude/settings.json`, `~/.codex/config.toml`, check for existing `urban-subagents` entries.
+1. **Detect** — locate `claude` and `codex` binaries, read existing `~/.claude/settings.json`, `~/.claude.json`, `~/.codex/config.toml`, check for existing `urban-subagents` entries.
 2. **Back up** — for any file we're about to touch, copy to `~/.urban-subagents/backups/<timestamp>/<original-path>`.
 3. **Prompt** — unless `--force`, show a diff of intended changes and ask for confirmation per file. `--dry-run` prints the diff and exits.
-4. **Write Claude config** — merge `permissions.deny`, the optional `hooks.PreToolUse` backstop, the managed `.claude/CLAUDE.md` delegation block, and a project `.mcp.json` entry under `mcpServers.urban-subagents` that launches `serve-mcp --host-runtime claude`.
+4. **Write Claude config** — merge `permissions.deny`, the optional `hooks.PreToolUse` backstop, the managed `~/.claude/CLAUDE.md` delegation block, and a user `~/.claude.json` entry under `mcpServers.urban-subagents` that launches `serve-mcp --host-runtime claude`.
 5. **Write Codex config** — merge TOML sections. `[features] multi_agent = false`, `[agents] max_depth = 1`, `[agents] max_threads = 1`, `[mcp_servers.urban-subagents]` block launching `serve-mcp --host-runtime codex`, per-profile `[profiles.<name>]` blocks from config.yaml.
 6. **Write AGENTS.md** — append the delegation instruction block to `~/.codex/AGENTS.md` (create if missing) with a clearly marked `<!-- urban-subagents --><!-- /urban-subagents -->` pair so uninstall can find and remove it.
 7. **Create state** — ensure `~/.urban-subagents/{config.yaml,sessions.db,logs/,backups/,outputs/}` exist. Initialize SQLite schema via migrations.
@@ -431,9 +431,9 @@ Idempotency: every write uses marker comments (`# urban-subagents-begin`/`# urba
 Checks, each pass/fail/warn with a fix suggestion:
 
 1. **Binaries** — `claude --version` and `codex --version` run successfully; supported version floors met.
-2. **Claude settings** — `.claude/settings.json` parses; `permissions.deny` contains `"Agent"`. Hook presence is optional.
-3. **Claude MCP config** — project `.mcp.json` parses and registers `mcpServers.urban-subagents` with a command and args.
-4. **CLAUDE.md** — `.claude/CLAUDE.md` exists and contains the managed broker instruction block.
+2. **Claude settings** — `~/.claude/settings.json` parses; `permissions.deny` contains `"Agent"`. Hook presence is optional.
+3. **Claude MCP config** — `~/.claude.json` parses and registers `mcpServers.urban-subagents` with a command and args.
+4. **CLAUDE.md** — `~/.claude/CLAUDE.md` exists and contains the managed broker instruction block.
 5. **Codex config** — `~/.codex/config.toml` parses; `features.multi_agent == false`; `agents.max_depth == 1`; `agents.max_threads == 1`; `mcp_servers.urban-subagents.command` resolvable on PATH; per-profile blocks match `config.yaml`.
 6. **AGENTS.md** — exists and contains the marker block.
 7. **MCP smoke test** — spawn `agent-broker serve-mcp`, send an `initialize` + `tools/list` via stdio, confirm the four tools respond, kill.

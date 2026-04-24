@@ -19,6 +19,8 @@ export interface AcceptanceContext {
   rootDir: string;
   workspaceDir: string;
   urbanHomeDir: string;
+  claudeHomeDir: string;
+  claudeConfigPath: string;
   codexHomeDir: string;
   hookLogPath: string;
   env: NodeJS.ProcessEnv;
@@ -201,18 +203,23 @@ export function createAcceptanceContext(name: string): AcceptanceContext {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), `urban-acceptance-${name}-`));
   const workspaceDir = path.join(rootDir, "workspace");
   const urbanHomeDir = path.join(rootDir, "urban-home");
+  const claudeHomeDir = path.join(rootDir, "claude-home");
+  const claudeConfigPath = path.join(rootDir, ".claude.json");
   const codexHomeDir = path.join(rootDir, "codex-home");
   const hookLogPath = path.join(rootDir, "hook-log.jsonl");
   const brokerArgs = getBrokerCliArgs(["serve-mcp"]);
 
   fs.mkdirSync(workspaceDir, { recursive: true });
   fs.mkdirSync(urbanHomeDir, { recursive: true });
+  fs.mkdirSync(claudeHomeDir, { recursive: true });
   fs.mkdirSync(codexHomeDir, { recursive: true });
   seedCodexAuth(codexHomeDir);
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     URBAN_SUBAGENTS_HOME: urbanHomeDir,
+    URBAN_SUBAGENTS_CLAUDE_HOME: claudeHomeDir,
+    URBAN_SUBAGENTS_CLAUDE_CONFIG_PATH: claudeConfigPath,
     CODEX_HOME: codexHomeDir,
     URBAN_SUBAGENTS_BROKER_COMMAND: process.execPath,
     URBAN_SUBAGENTS_BROKER_ARGS: JSON.stringify(brokerArgs),
@@ -233,6 +240,8 @@ export function createAcceptanceContext(name: string): AcceptanceContext {
     rootDir,
     workspaceDir,
     urbanHomeDir,
+    claudeHomeDir,
+    claudeConfigPath,
     codexHomeDir,
     hookLogPath,
     env,

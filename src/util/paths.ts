@@ -14,10 +14,10 @@ export interface StatePaths {
   promptsDir: string;
   userConfigPath: string;
   projectConfigPath: string;
-  claudeProjectDir: string;
-  claudeProjectInstructionsPath: string;
-  claudeProjectSettingsPath: string;
-  claudeProjectMcpPath: string;
+  claudeHomeDir: string;
+  claudeUserInstructionsPath: string;
+  claudeUserSettingsPath: string;
+  claudeUserConfigPath: string;
   codexHomeDir: string;
   codexConfigPath: string;
   codexAgentsPath: string;
@@ -43,10 +43,23 @@ export function getCodexHome(): string {
     : path.join(os.homedir(), ".codex");
 }
 
+export function getClaudeHome(): string {
+  return process.env.URBAN_SUBAGENTS_CLAUDE_HOME
+    ? path.resolve(process.env.URBAN_SUBAGENTS_CLAUDE_HOME)
+    : path.join(os.homedir(), ".claude");
+}
+
+export function getClaudeConfigPath(): string {
+  return process.env.URBAN_SUBAGENTS_CLAUDE_CONFIG_PATH
+    ? path.resolve(process.env.URBAN_SUBAGENTS_CLAUDE_CONFIG_PATH)
+    : path.join(os.homedir(), ".claude.json");
+}
+
 export function getStatePaths(cwd = process.cwd()): StatePaths {
   const homeDir = getUrbanSubagentsHome();
   const codexHomeDir = getCodexHome();
-  const claudeProjectDir = path.join(cwd, ".claude");
+  const claudeHomeDir = getClaudeHome();
+  const claudeUserConfigPath = getClaudeConfigPath();
 
   return {
     packageRoot,
@@ -58,10 +71,10 @@ export function getStatePaths(cwd = process.cwd()): StatePaths {
     promptsDir: path.join(homeDir, "prompts"),
     userConfigPath: path.join(homeDir, "config.yaml"),
     projectConfigPath: path.join(cwd, ".urban-subagents", "config.yaml"),
-    claudeProjectDir,
-    claudeProjectInstructionsPath: path.join(claudeProjectDir, "CLAUDE.md"),
-    claudeProjectSettingsPath: path.join(claudeProjectDir, "settings.json"),
-    claudeProjectMcpPath: path.join(cwd, ".mcp.json"),
+    claudeHomeDir,
+    claudeUserInstructionsPath: path.join(claudeHomeDir, "CLAUDE.md"),
+    claudeUserSettingsPath: path.join(claudeHomeDir, "settings.json"),
+    claudeUserConfigPath,
     codexHomeDir,
     codexConfigPath: path.join(codexHomeDir, "config.toml"),
     codexAgentsPath: path.join(codexHomeDir, "AGENTS.md")

@@ -68,11 +68,11 @@ describe("phase 1 real init acceptance", () => {
       expect(fs.existsSync(path.join(context.urbanHomeDir, "sessions.db"))).toBe(true);
 
       if (host === "all" || host === "claude") {
-        expect(fs.existsSync(path.join(context.workspaceDir, ".claude", "CLAUDE.md"))).toBe(true);
-        expect(fs.existsSync(path.join(context.workspaceDir, ".claude", "settings.json"))).toBe(true);
-        expect(fs.existsSync(path.join(context.workspaceDir, ".mcp.json"))).toBe(true);
+        expect(fs.existsSync(path.join(context.claudeHomeDir, "CLAUDE.md"))).toBe(true);
+        expect(fs.existsSync(path.join(context.claudeHomeDir, "settings.json"))).toBe(true);
+        expect(fs.existsSync(context.claudeConfigPath)).toBe(true);
         const claudeMcp = JSON.parse(
-          fs.readFileSync(path.join(context.workspaceDir, ".mcp.json"), "utf8"),
+          fs.readFileSync(context.claudeConfigPath, "utf8"),
         ) as Record<string, unknown>;
         expect(
           ((claudeMcp.mcpServers as Record<string, unknown>)["urban-subagents"] as Record<string, unknown>).args,

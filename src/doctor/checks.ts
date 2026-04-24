@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -301,10 +302,10 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
   }
 
   if (host === "all" || host === "claude") {
-    const claudeSettingsExists = fs.existsSync(statePaths.claudeProjectSettingsPath);
+    const claudeSettingsExists = fs.existsSync(statePaths.claudeUserSettingsPath);
     if (claudeSettingsExists) {
       const settings = JSON.parse(
-        fs.readFileSync(statePaths.claudeProjectSettingsPath, "utf8"),
+        fs.readFileSync(statePaths.claudeUserSettingsPath, "utf8"),
       ) as Record<string, unknown>;
       const hooks =
         ((settings.hooks as Record<string, unknown> | undefined)?.PreToolUse as Array<Record<string, unknown>> | undefined) ??
@@ -316,7 +317,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
           pass(
             "claude",
             "Claude Settings",
-            "Project Claude settings disable native Agent and Task tools and register the redirect hook.",
+            "User Claude settings disable native Agent and Task tools and register the redirect hook.",
           ),
         );
       } else if (hasManagedClaudeDenyEntries(settings)) {
@@ -324,7 +325,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
           pass(
             "claude",
             "Claude Settings",
-            "Project Claude settings disable native Agent and Task tools. The redirect hook is optional in the current host strategy.",
+            "User Claude settings disable native Agent and Task tools. The redirect hook is optional in the current host strategy.",
           ),
         );
       } else {
@@ -342,7 +343,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
         fail(
           "claude",
           "Claude Settings",
-          "Expected `.claude/settings.json` in the project root.",
+          "Expected `~/.claude/settings.json` for user-scoped Claude configuration.",
           "Run `agent-broker init --force --host claude`.",
         ),
       );
@@ -350,10 +351,10 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
   }
 
   if (host === "all" || host === "claude") {
-    if (fs.existsSync(statePaths.claudeProjectMcpPath)) {
+    if (fs.existsSync(statePaths.claudeUserConfigPath)) {
       try {
         const config = JSON.parse(
-          fs.readFileSync(statePaths.claudeProjectMcpPath, "utf8"),
+          fs.readFileSync(statePaths.claudeUserConfigPath, "utf8"),
         ) as Record<string, unknown>;
 
         if (hasManagedClaudeMcpServer(config)) {
@@ -361,7 +362,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
             pass(
               "claude-mcp",
               "Claude MCP Config",
-              "Project .mcp.json registers the broker under mcpServers.urban-subagents.",
+              "User ~/.claude.json registers the broker under mcpServers.urban-subagents.",
             ),
           );
         } else if (
@@ -372,7 +373,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
             fail(
               "claude-mcp",
               "Claude MCP Config",
-              "Project .mcp.json uses a legacy top-level urban-subagents entry instead of mcpServers.urban-subagents.",
+              "User ~/.claude.json uses a legacy top-level urban-subagents entry instead of mcpServers.urban-subagents.",
               "Run `agent-broker init --force --host claude`.",
             ),
           );
@@ -381,7 +382,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
             fail(
               "claude-mcp",
               "Claude MCP Config",
-              "Project .mcp.json is missing mcpServers.urban-subagents with command and args.",
+              "User ~/.claude.json is missing mcpServers.urban-subagents with command and args.",
               "Run `agent-broker init --force --host claude`.",
             ),
           );
@@ -391,7 +392,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
           fail(
             "claude-mcp",
             "Claude MCP Config",
-            `Unable to parse .mcp.json: ${(error as Error).message}`,
+            `Unable to parse ~/.claude.json: ${(error as Error).message}`,
             "Run `agent-broker init --force --host claude`.",
           ),
         );
@@ -401,7 +402,7 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
         fail(
           "claude-mcp",
           "Claude MCP Config",
-          "Expected `.mcp.json` in the project root.",
+          "Expected `~/.claude.json` with a user-scoped MCP registration.",
           "Run `agent-broker init --force --host claude`.",
         ),
       );
@@ -409,8 +410,8 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
   }
 
   if (host === "all" || host === "claude") {
-    const instructions = fs.existsSync(statePaths.claudeProjectInstructionsPath)
-      ? fs.readFileSync(statePaths.claudeProjectInstructionsPath, "utf8")
+    const instructions = fs.existsSync(statePaths.claudeUserInstructionsPath)
+      ? fs.readFileSync(statePaths.claudeUserInstructionsPath, "utf8")
       : "";
     if (
       instructions.includes("<!-- urban-subagents -->") &&
@@ -429,8 +430,38 @@ async function collectDoctorChecks(options: DoctorOptions): Promise<DoctorCheckR
         fail(
           "claude-md",
           "CLAUDE.md",
-          "Managed broker instruction block is missing from .claude/CLAUDE.md.",
+          "Managed broker instruction block is missing from ~/.claude/CLAUDE.md.",
           "Run `agent-broker init --force --host claude`.",
+        ),
+      );
+    }
+  }
+
+  if (host === "all" || host === "claude") {
+    const projectClaudeSettingsPath = path.join(cwd, ".claude", "settings.json");
+    const projectClaudeMdPath = path.join(cwd, ".claude", "CLAUDE.md");
+    const projectMcpPath = path.join(cwd, ".mcp.json");
+    const projectOverrides = [
+      fs.existsSync(projectClaudeSettingsPath) ? projectClaudeSettingsPath : null,
+      fs.existsSync(projectClaudeMdPath) ? projectClaudeMdPath : null,
+      fs.existsSync(projectMcpPath) ? projectMcpPath : null
+    ].filter((value): value is string => Boolean(value));
+
+    if (projectOverrides.length > 0) {
+      results.push(
+        warn(
+          "claude-project-overrides",
+          "Claude Project Overrides",
+          `Project-level Claude files can override the new user-scoped broker setup: ${projectOverrides.join(", ")}`,
+          "Remove or reconcile the project-scoped Claude files if they conflict with the user-scoped install.",
+        ),
+      );
+    } else {
+      results.push(
+        pass(
+          "claude-project-overrides",
+          "Claude Project Overrides",
+          "No project-scoped Claude files were detected that would shadow the user-scoped broker setup.",
         ),
       );
     }

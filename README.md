@@ -22,6 +22,7 @@ What this does:
 - runs `agent-broker doctor --verbose`
 
 The generated Claude and Codex host config points at the persistent installed broker, not repo-local `tsx` paths and not `npx`.
+Claude is now configured at user scope by default under `~/.claude/` and `~/.claude.json`, while Codex remains user-scoped under `~/.codex/`.
 
 ## GitHub Release Install
 

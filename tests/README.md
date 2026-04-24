@@ -63,14 +63,14 @@ Manual host testing is intentionally different from the automated acceptance har
 
 - Automated acceptance uses isolated temp homes.
 - Manual host testing uses your real PATH-installed `claude` and `codex` CLIs and your real base host configs.
-- The scratch directory is only for project-scoped files like `.claude/CLAUDE.md`, `.claude/settings.json`, and `.mcp.json`.
+- The scratch directory is mainly for broker workspace operations; Claude itself is now configured through user-scoped files like `~/.claude/CLAUDE.md`, `~/.claude/settings.json`, and `~/.claude.json`.
 - The only recommended manual override is `BROKER_CLAUDE_MODE=oauth-acceptance` so broker-spawned Claude delegates work with OAuth-backed local installs.
 
 Current manual expectations:
 
 - Claude:
   - Preferred success path: a natural-language delegation request causes Claude to use `mcp__urban-subagents__list_agents` and then `mcp__urban-subagents__delegate`.
-  - The managed project `.mcp.json` should register the broker under `mcpServers.urban-subagents`.
+  - The managed user `~/.claude.json` should register the broker under `mcpServers.urban-subagents`.
   - Native `Agent` remains disabled, but hook-log evidence is secondary rather than the primary success signal.
   - Known failure signal to capture verbatim: Claude says delegation is unavailable instead of using the broker MCP tools.
 - Codex:

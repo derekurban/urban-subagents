@@ -4,11 +4,11 @@
   "description": "Cross-provider sub-agent broker for Claude Code and Codex.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/derekurban/urban-subagents.git"
+    "url": "git+https://github.com/derekurban/urban-subagents.git"
   },
   "type": "module",
   "bin": {
-    "agent-broker": "./dist/cli/index.js"
+    "agent-broker": "dist/cli/index.js"
   },
   "publishConfig": {
     "access": "public"
