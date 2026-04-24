@@ -24,6 +24,65 @@ What this does:
 The generated Claude and Codex host config points at the persistent installed broker, not repo-local `tsx` paths and not `npx`.
 Claude is now configured at user scope by default under `~/.claude/` and `~/.claude.json`, while Codex remains user-scoped under `~/.codex/`.
 
+## Broker Config
+
+`agent-broker init` creates the default broker config at:
+
+```text
+~/.urban-subagents/config.yaml
+```
+
+You can override it for a single project by creating:
+
+```text
+./.urban-subagents/config.yaml
+```
+
+When a project config exists, it replaces the user config for commands run from that project. The supported v1 schema is intentionally small:
+
+```yaml
+version: 0.1
+broker:
+  execution_mode: sync
+  default_output:
+    format: text
+
+agents:
+  reviewer:
+    description: Read-only code review
+    runtime: codex_exec
+    model: gpt-5.4
+    prompt_file: prompts/reviewer.md
+
+  planner:
+    description: Generate implementation plans
+    runtime: claude_code
+    model: opus
+    prompt_file: prompts/planner.md
+```
+
+### Top-Level Fields
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `version` | No | Config format marker. Defaults to `0.1` when omitted. |
+| `broker.execution_mode` | No | Execution model for delegation. Only `sync` is supported in v1, and it is the default. |
+| `broker.default_output.format` | No | Default result format. Only `text` is supported in v1, and it is the default. |
+| `agents` | Yes | Map of named broker profiles exposed through `agents list`, MCP `list_agents`, and `delegate --agent <name>`. |
+
+### Agent Profile Fields
+
+Each entry under `agents` is a named profile. The profile name is the value you pass to `delegate --agent` and the name hosts see through MCP.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `description` | Yes | Short human/model-facing summary of when to use the profile. |
+| `runtime` | Yes | Provider backend. Use `claude_code` for Claude Code or `codex_exec` for Codex CLI. |
+| `model` | Yes | Model string passed to the selected backend, such as `opus`, `sonnet`, or `gpt-5.4`. |
+| `prompt_file` | Yes | Path to the profile's system prompt. Relative paths resolve from the directory containing the active config file. Absolute paths are also accepted. |
+
+Tool permissions, sandboxing, approval policy, recursive-delegation blocking, reasoning effort, and resume support are not YAML options in v1. They are derived by the broker from the profile name and runtime. Names containing words like `review`, `plan`, `research`, `audit`, `explore`, or `docs` are treated as read-only profiles; other names default to workspace-write profiles. All profiles block recursive delegation and support resume.
+
 ## GitHub Release Install
 
 The bootstrap command can also promote itself from a GitHub tarball or git spec instead of the npm registry.
