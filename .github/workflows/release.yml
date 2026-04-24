@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TARBALL="$(npm pack --json | node -e "const fs = require('node:fs'); const output = JSON.parse(fs.readFileSync(0, 'utf8')); console.log(output[0].filename);")"
+          TARBALL="$(npm pack --json --ignore-scripts | node -e "const fs = require('node:fs'); const output = JSON.parse(fs.readFileSync(0, 'utf8')); console.log(output[0].filename);")"
           echo "TARBALL_NAME=$TARBALL" >> "$GITHUB_ENV"
 
       - name: Upload tarball artifact
