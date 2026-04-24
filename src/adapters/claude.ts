@@ -25,9 +25,7 @@ export interface ClaudeAdapterOptions {
 export function getClaudeExecutionMode(
   env: NodeJS.ProcessEnv = process.env,
 ): ClaudeExecutionMode {
-  return env.BROKER_CLAUDE_MODE === "oauth-acceptance"
-    ? "oauth-acceptance"
-    : "strict";
+  return env.BROKER_CLAUDE_MODE === "strict" ? "strict" : "oauth-acceptance";
 }
 
 export function buildClaudeModeArgs(mode: ClaudeExecutionMode): string[] {

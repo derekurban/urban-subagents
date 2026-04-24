@@ -1,6 +1,6 @@
 {
   "name": "urban-subagents",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Cross-provider sub-agent broker for Claude Code and Codex.",
   "repository": {
     "type": "git",
