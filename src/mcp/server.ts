@@ -92,43 +92,74 @@ export async function serveMcp(
     },
   );
 
+  const delegateRequestSchema = {
+    agent: z.string(),
+    prompt: z.string(),
+    session_id: z.string().optional(),
+    cwd: z.string().optional(),
+    context: z.record(z.string(), z.unknown()).optional()
+  };
+
+  const normalizeDelegateArgs = (args: {
+    agent: string;
+    prompt: string;
+    session_id?: string | undefined;
+    cwd?: string | undefined;
+    context?: Record<string, unknown> | undefined;
+  }) => {
+    const request: {
+      agent: string;
+      prompt: string;
+      session_id?: string;
+      cwd?: string;
+      context?: Record<string, unknown>;
+    } = {
+      agent: args.agent,
+      prompt: args.prompt
+    };
+    if (args.session_id) {
+      request.session_id = args.session_id;
+    }
+    if (args.cwd) {
+      request.cwd = args.cwd;
+    }
+    if (args.context) {
+      request.context = args.context;
+    }
+    return request;
+  };
+
   server.registerTool(
     "delegate",
     {
       description:
-        "Delegate work to a broker-managed child agent. Use this instead of the native Agent tool or native subagent APIs.",
-      inputSchema: {
-        agent: z.string(),
-        prompt: z.string(),
-        session_id: z.string().optional(),
-        cwd: z.string().optional(),
-        context: z.record(z.string(), z.unknown()).optional()
-      }
+        "Delegate work to a single broker-managed child agent. Use this instead of the native Agent tool or native subagent APIs. When you have multiple independent tasks, prefer delegate_many so they run concurrently — calling delegate sequentially will block.",
+      inputSchema: delegateRequestSchema
     },
     async (args) => {
-      const request: {
-        agent: string;
-        prompt: string;
-        session_id?: string;
-        cwd?: string;
-        context?: Record<string, unknown>;
-      } = {
-        agent: args.agent,
-        prompt: args.prompt
-      };
-      if (args.session_id) {
-        request.session_id = args.session_id;
-      }
-      if (args.cwd) {
-        request.cwd = args.cwd;
-      }
-      if (args.context) {
-        request.context = args.context;
-      }
-      const result = await broker.delegate(request);
+      const result = await broker.delegate(normalizeDelegateArgs(args));
       return {
         content: [{ type: "text", text: toolText(result) }],
         structuredContent: { ...result }
+      };
+    },
+  );
+
+  server.registerTool(
+    "delegate_many",
+    {
+      description:
+        "Delegate multiple independent tasks to broker-managed child agents in a single tool call. All children run concurrently; the tool returns once every child has finished. Use this whenever you would otherwise issue several delegate calls in a row — this is the only way to get true parallelism, because the host MCP client serializes separate tool calls to the same server. Each item succeeds or fails independently; partial failures do not abort the batch.",
+      inputSchema: {
+        requests: z.array(z.object(delegateRequestSchema)).min(1).max(16)
+      }
+    },
+    async (args) => {
+      const requests = args.requests.map(normalizeDelegateArgs);
+      const results = await broker.delegateMany(requests);
+      return {
+        content: [{ type: "text", text: toolText(results) }],
+        structuredContent: { results }
       };
     },
   );

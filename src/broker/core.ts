@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type {
   BrokerEnvironment,
+  DelegateManyItem,
   DelegateRequest,
   DelegateResult,
   ListSessionsOptions,
@@ -92,6 +93,27 @@ export class BrokerCore {
       cwd,
       brokerEnvironment: this.brokerEnvironment,
       sessionStore: this.sessionStore
+    });
+  }
+
+  async delegateMany(requests: DelegateRequest[]): Promise<DelegateManyItem[]> {
+    const settled = await Promise.allSettled(
+      requests.map((request) => this.delegate(request)),
+    );
+
+    return settled.map((outcome, index) => {
+      if (outcome.status === "fulfilled") {
+        return { ok: true as const, result: outcome.value };
+      }
+
+      const reason = outcome.reason;
+      const message =
+        reason instanceof Error ? reason.message : String(reason ?? "Unknown error");
+      return {
+        ok: false as const,
+        agent: requests[index]!.agent,
+        error: message
+      };
     });
   }
 

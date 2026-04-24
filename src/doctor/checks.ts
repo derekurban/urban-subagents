@@ -93,11 +93,11 @@ async function runMcpSmokeTest(cwd: string): Promise<DoctorCheckResult> {
     const tools = await client.listTools();
     await transport.close();
 
-    if (tools.tools.length < 4) {
+    if (tools.tools.length < 5) {
       return fail(
         "mcp",
         "MCP Smoke Test",
-        `Expected at least 4 tools, got ${tools.tools.length}.`,
+        `Expected at least 5 tools, got ${tools.tools.length}.`,
       );
     }
 

@@ -87,6 +87,10 @@ export interface DelegateResult {
   runtime: Runtime;
 }
 
+export type DelegateManyItem =
+  | { ok: true; result: DelegateResult }
+  | { ok: false; agent: string; error: string };
+
 export interface SessionRow {
   session_id: string;
   provider_handle: string;

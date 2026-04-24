@@ -38,7 +38,13 @@ describe("broker MCP end-to-end", () => {
     await client.connect(transport);
     const tools = await client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining(["list_agents", "list_sessions", "delegate", "cancel"]),
+      expect.arrayContaining([
+        "list_agents",
+        "list_sessions",
+        "delegate",
+        "delegate_many",
+        "cancel"
+      ]),
     );
 
     const delegate = await client.callTool({
@@ -49,6 +55,30 @@ describe("broker MCP end-to-end", () => {
       }
     });
     expect(JSON.stringify(delegate)).toContain("Codex handled");
+
+    const batchStart = Date.now();
+    const batch = await client.callTool({
+      name: "delegate_many",
+      arguments: {
+        requests: [
+          { agent: "reviewer", prompt: "A" },
+          { agent: "reviewer", prompt: "B" },
+          { agent: "reviewer", prompt: "C" }
+        ]
+      }
+    });
+    const batchDuration = Date.now() - batchStart;
+
+    const batchStructured = (batch as { structuredContent?: { results?: unknown[] } })
+      .structuredContent;
+    expect(batchStructured?.results).toHaveLength(3);
+    expect(JSON.stringify(batch)).toContain("Codex handled");
+
+    const singleDuration = (
+      (delegate as { structuredContent?: { duration_ms?: number } }).structuredContent
+        ?.duration_ms
+    ) ?? 0;
+    expect(batchDuration).toBeLessThan(singleDuration * 3);
 
     await transport.close();
   });

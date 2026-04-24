@@ -1,10 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import type { AgentProfile, BrokerEnvironment, DelegateRequest, DelegateResult } from "../broker/types.js";
 import { SessionStore } from "../store/sessions.js";
 import { createLogger } from "../util/logging.js";
-import { getCodexHome, getStatePaths } from "../util/paths.js";
+import { getStatePaths } from "../util/paths.js";
 import {
   createOutputCaptureFile,
   fallbackEnv,
@@ -72,41 +69,8 @@ export interface CodexAdapterOptions {
   sessionStore: SessionStore;
 }
 
-const CODEX_AUTH_FILES = [
-  "auth.json",
-  "cap_sid",
-  "config.json",
-  "installation_id",
-  "version.json",
-] as const;
-
-function copyIfExists(source: string, target: string): void {
-  if (!fs.existsSync(source)) {
-    return;
-  }
-
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(source, target);
-}
-
-function prepareIsolatedCodexHome(cwd: string): string {
-  const sourceHome = getCodexHome();
-  const outputsDir = getStatePaths(cwd).outputsDir;
-  fs.mkdirSync(outputsDir, { recursive: true });
-
-  const childHome = path.join(outputsDir, "codex-child-home");
-  fs.mkdirSync(childHome, { recursive: true });
-
-  for (const name of CODEX_AUTH_FILES) {
-    copyIfExists(path.join(sourceHome, name), path.join(childHome, name));
-  }
-
-  return childHome;
-}
-
-function buildCodexChildEnv(cwd: string): NodeJS.ProcessEnv {
+function buildCodexChildEnv(): NodeJS.ProcessEnv {
   const env = fallbackEnv({
-    CODEX_HOME: prepareIsolatedCodexHome(cwd),
     URBAN_SUBAGENTS_CHILD: "1"
   });
   delete env.BROKER_HOST_SESSION_ID;
@@ -191,7 +155,7 @@ export async function runCodexDelegate(
     command,
     args,
     cwd: options.cwd,
-    env: buildCodexChildEnv(options.cwd),
+    env: buildCodexChildEnv(),
     stdin: prompt,
     onSpawn(pid) {
       spawnedPid = pid;
