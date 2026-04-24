@@ -106,7 +106,8 @@ function prepareIsolatedCodexHome(cwd: string): string {
 
 function buildCodexChildEnv(cwd: string): NodeJS.ProcessEnv {
   const env = fallbackEnv({
-    CODEX_HOME: prepareIsolatedCodexHome(cwd)
+    CODEX_HOME: prepareIsolatedCodexHome(cwd),
+    URBAN_SUBAGENTS_CHILD: "1"
   });
   delete env.BROKER_HOST_SESSION_ID;
   delete env.BROKER_HOST_RUNTIME;

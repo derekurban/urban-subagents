@@ -52,12 +52,14 @@ agents:
     description: Read-only code review
     runtime: codex_exec
     model: gpt-5.4
+    reasoning_effort: high
     prompt_file: prompts/reviewer.md
 
   planner:
     description: Generate implementation plans
     runtime: claude_code
     model: opus
+    reasoning_effort: high
     prompt_file: prompts/planner.md
 ```
 
@@ -79,9 +81,12 @@ Each entry under `agents` is a named profile. The profile name is the value you 
 | `description` | Yes | Short human/model-facing summary of when to use the profile. |
 | `runtime` | Yes | Provider backend. Use `claude_code` for Claude Code or `codex_exec` for Codex CLI. |
 | `model` | Yes | Model string passed to the selected backend, such as `opus`, `sonnet`, or `gpt-5.4`. |
+| `reasoning_effort` | No | Reasoning budget for this profile. Supported values are `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. Defaults to `high`. |
 | `prompt_file` | Yes | Path to the profile's system prompt. Relative paths resolve from the directory containing the active config file. Absolute paths are also accepted. |
 
-Tool permissions, sandboxing, approval policy, recursive-delegation blocking, reasoning effort, and resume support are not YAML options in v1. They are derived by the broker from the profile name and runtime. Names containing words like `review`, `plan`, `research`, `audit`, `explore`, or `docs` are treated as read-only profiles; other names default to workspace-write profiles. All profiles block recursive delegation and support resume.
+`reasoning_effort` is mapped to each backend's closest supported value. Claude maps `minimal` to `low`; Codex maps `max` to `xhigh`.
+
+Tool permissions, sandboxing, approval policy, recursive-delegation blocking, and resume support are not YAML options in v1. They are derived by the broker from the profile name and runtime. Names containing words like `review`, `plan`, `research`, `audit`, `explore`, or `docs` are treated as read-only profiles; other names default to workspace-write profiles. All delegated child agents are marked as broker-managed children, receive no broker MCP server, have native multi-agent features disabled, and are rejected if they try to call `agent-broker delegate` recursively.
 
 ## GitHub Release Install
 

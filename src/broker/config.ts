@@ -6,11 +6,21 @@ import { z } from "zod";
 import type { BrokerConfig, RawBrokerConfig } from "./types.js";
 import { getStatePaths } from "../util/paths.js";
 
+const reasoningEffortSchema = z.enum([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max"
+]);
+
 const rawAgentProfileSchema = z.object({
   description: z.string().min(1),
   runtime: z.enum(["claude_code", "codex_exec"]),
   model: z.string().min(1),
-  prompt_file: z.string().min(1)
+  prompt_file: z.string().min(1),
+  reasoning_effort: reasoningEffortSchema.optional()
 });
 
 const rawConfigSchema = z.object({

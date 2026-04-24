@@ -37,6 +37,7 @@ describe("resolveAgentProfiles", () => {
           description: "Review code",
           runtime: "codex_exec",
           model: "gpt-5.4",
+          reasoning_effort: "minimal",
           prompt_file: "reviewer.md"
         }
       }
@@ -44,6 +45,40 @@ describe("resolveAgentProfiles", () => {
 
     const [profile] = resolveAgentProfiles(config);
     expect(profile?.codex.sandboxMode).toBe("read-only");
+    expect(profile?.codex.reasoningEffort).toBe("minimal");
     expect(profile?.claude.tools).toEqual(["Read", "LS", "Glob", "Grep"]);
+    expect(profile?.claude.effort).toBe("low");
+  });
+
+  it("maps max reasoning effort to the highest Codex value", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "urban-profiles-"));
+    tempDirs.push(tempDir);
+    const promptFile = path.join(tempDir, "builder.md");
+    fs.writeFileSync(promptFile, "prompt", "utf8");
+
+    const config: BrokerConfig = {
+      path: path.join(tempDir, "config.yaml"),
+      source: "user",
+      version: "0.1",
+      broker: {
+        execution_mode: "sync",
+        default_output: {
+          format: "text"
+        }
+      },
+      agents: {
+        builder: {
+          description: "Build code",
+          runtime: "codex_exec",
+          model: "gpt-5.4",
+          reasoning_effort: "max",
+          prompt_file: "builder.md"
+        }
+      }
+    };
+
+    const [profile] = resolveAgentProfiles(config);
+    expect(profile?.codex.reasoningEffort).toBe("xhigh");
+    expect(profile?.claude.effort).toBe("max");
   });
 });

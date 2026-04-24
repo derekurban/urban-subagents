@@ -13,6 +13,7 @@ agents:
     description: Read-only review
     runtime: codex_exec
     model: gpt-5.4
+    reasoning_effort: xhigh
     prompt_file: prompts/reviewer.md
 `,
       path.resolve("config.yaml"),
@@ -23,5 +24,6 @@ agents:
     expect(config.broker.execution_mode).toBe("sync");
     expect(config.broker.default_output.format).toBe("text");
     expect(config.agents.reviewer?.runtime).toBe("codex_exec");
+    expect(config.agents.reviewer?.reasoning_effort).toBe("xhigh");
   });
 });

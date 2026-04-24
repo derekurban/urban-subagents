@@ -5,6 +5,7 @@ import type {
   BrokerConfig,
   ClaudeProfileDefaults,
   CodexProfileDefaults,
+  ReasoningEffort,
 } from "./types.js";
 import { resolvePromptPath } from "../util/paths.js";
 
@@ -12,35 +13,51 @@ function isReadOnlyAgent(name: string): boolean {
   return /review|plan|research|audit|explore|docs/i.test(name);
 }
 
-function buildClaudeDefaults(name: string): ClaudeProfileDefaults {
+function toClaudeEffort(effort: ReasoningEffort | undefined): ClaudeProfileDefaults["effort"] {
+  if (effort === "minimal") {
+    return "low";
+  }
+
+  return effort ?? "high";
+}
+
+function toCodexEffort(effort: ReasoningEffort | undefined): CodexProfileDefaults["reasoningEffort"] {
+  if (effort === "max") {
+    return "xhigh";
+  }
+
+  return effort ?? "high";
+}
+
+function buildClaudeDefaults(name: string, effort: ReasoningEffort | undefined): ClaudeProfileDefaults {
   if (isReadOnlyAgent(name)) {
     return {
       tools: ["Read", "LS", "Glob", "Grep"],
       permissionMode: "bypassPermissions",
-      effort: "high"
+      effort: toClaudeEffort(effort)
     };
   }
 
   return {
     tools: ["Read", "LS", "Glob", "Grep", "Edit", "MultiEdit", "Write", "Bash"],
     permissionMode: "bypassPermissions",
-    effort: "high"
+    effort: toClaudeEffort(effort)
   };
 }
 
-function buildCodexDefaults(name: string): CodexProfileDefaults {
+function buildCodexDefaults(name: string, effort: ReasoningEffort | undefined): CodexProfileDefaults {
   if (isReadOnlyAgent(name)) {
     return {
       sandboxMode: "read-only",
       approvalPolicy: "never",
-      reasoningEffort: "high"
+      reasoningEffort: toCodexEffort(effort)
     };
   }
 
   return {
     sandboxMode: "workspace-write",
     approvalPolicy: "never",
-    reasoningEffort: "high"
+    reasoningEffort: toCodexEffort(effort)
   };
 }
 
@@ -65,8 +82,8 @@ export function resolveAgentProfiles(config: BrokerConfig): AgentProfile[] {
       promptFilePath,
       permissions: buildPermissions(name),
       supports_resume: true,
-      claude: buildClaudeDefaults(name),
-      codex: buildCodexDefaults(name)
+      claude: buildClaudeDefaults(name, agent.reasoning_effort),
+      codex: buildCodexDefaults(name, agent.reasoning_effort)
     };
   });
 }

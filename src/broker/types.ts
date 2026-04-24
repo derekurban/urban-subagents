@@ -2,6 +2,14 @@ export type Runtime = "claude_code" | "codex_exec";
 
 export type HostRuntime = "claude" | "codex" | null;
 
+export type ReasoningEffort =
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max";
+
 export type SessionStatus =
   | "running"
   | "idle"
@@ -14,6 +22,7 @@ export interface RawAgentProfile {
   runtime: Runtime;
   model: string;
   prompt_file: string;
+  reasoning_effort?: ReasoningEffort | undefined;
 }
 
 export interface RawBrokerConfig {

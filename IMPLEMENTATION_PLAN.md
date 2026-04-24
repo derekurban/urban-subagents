@@ -260,16 +260,18 @@ agents:
     description: Read-only code review
     runtime: codex_exec              # or claude_code
     model: gpt-5.4                   # or 'opus'/'sonnet' for Claude
+    reasoning_effort: high           # optional: minimal|low|medium|high|xhigh|max
     prompt_file: prompts/reviewer.md
 
   planner:
     description: Generate implementation plans
     runtime: claude_code
     model: opus
+    reasoning_effort: high
     prompt_file: prompts/planner.md
 ```
 
-v1 keeps the profile schema intentionally minimal — `description`, `runtime`, `model`, and `prompt_file` per agent. Additional knobs (effort, tool restrictions, sandbox mode, permissions, max_turns, structured output schemas) get sensible per-runtime defaults baked into the adapter and can be lifted into the config once real use shapes what's worth exposing. A profile targets one runtime at a time; cross-runtime profiles are a future direction.
+v1 keeps the profile schema intentionally minimal — `description`, `runtime`, `model`, optional `reasoning_effort`, and `prompt_file` per agent. `reasoning_effort` defaults to `high`; Claude maps `minimal` to `low`, and Codex maps `max` to `xhigh`. Additional knobs (tool restrictions, sandbox mode, permissions, max_turns, structured output schemas) get sensible per-runtime defaults baked into the adapter and can be lifted into the config once real use shapes what's worth exposing. A profile targets one runtime at a time; cross-runtime profiles are a future direction.
 
 ---
 
@@ -405,8 +407,9 @@ Belt-and-suspenders: `multi_agent=false` blocks at tool-surface level; global `A
 
 When the broker spawns a Claude or Codex child (via `delegate`), the child itself must also be prevented from spawning further subagents or re-entering the broker. Enforced via:
 
-- **Claude child**: `--disallowedTools "Agent"` + `--strict-mcp-config --mcp-config <empty-or-readonly-servers.json>` + `--bare`
-- **Codex child**: `-c features.multi_agent=false -c agents.max_depth=1 -c agents.max_threads=1` inline config overrides
+- **Claude child**: `--disallowedTools "Agent,TaskCreate,TaskGet,TaskUpdate,TaskDelete"` + `--strict-mcp-config --mcp-config <empty-or-readonly-servers.json>` + `--bare` in strict mode
+- **Codex child**: isolated `CODEX_HOME`, `--ignore-user-config`, `--ignore-rules`, `-c features.multi_agent=false`, `-c agents.max_depth=1`, `-c agents.max_threads=1`, and `-c project_doc_max_bytes=0`
+- **Broker re-entry guard**: both adapters set `URBAN_SUBAGENTS_CHILD=1`; `BrokerCore.delegate()` rejects delegate calls made from broker-managed child agents.
 
 ---
 
@@ -607,7 +610,7 @@ Noted but out of scope for the first cut — add only when there's a real need:
 - Shared daemon (hook-managed broker process) for cross-session real-time state
 - Codex app-server adapter (for `turn/interrupt` instead of process-kill)
 - Cross-runtime profiles (same `reviewer` agent usable against either Claude or Codex; v1 requires one `runtime` per profile)
-- Richer profile schema (tool allowlists, sandbox mode, effort, max_turns, structured output schemas) once real use shapes what's worth exposing
+- Richer profile schema (tool allowlists, sandbox mode, max_turns, structured output schemas) once real use shapes what's worth exposing
 - JSON-schema-typed output via `claude -p --json-schema`
 - Background/detached execution + `wait` tool
 - `agent-broker sessions delete <id>` and optional opt-in TTL pruning

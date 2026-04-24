@@ -62,6 +62,10 @@ export class BrokerCore {
   }
 
   async delegate(request: DelegateRequest): Promise<DelegateResult> {
+    if (process.env.URBAN_SUBAGENTS_CHILD === "1") {
+      throw new Error("Recursive delegation is disabled inside broker-managed child agents.");
+    }
+
     const config = this.getConfig();
     const profile = getAgentProfile(config, request.agent);
     const cwd = request.cwd ?? this.cwd;

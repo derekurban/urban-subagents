@@ -43,7 +43,14 @@ export function buildClaudeModeArgs(mode: ClaudeExecutionMode): string[] {
 }
 
 export function buildClaudeEnv(mode: ClaudeExecutionMode): NodeJS.ProcessEnv {
-  const env = fallbackEnv();
+  const env = fallbackEnv({
+    URBAN_SUBAGENTS_CHILD: "1"
+  });
+  delete env.BROKER_HOST_SESSION_ID;
+  delete env.BROKER_HOST_RUNTIME;
+  delete env.URBAN_SUBAGENTS_BROKER_COMMAND;
+  delete env.URBAN_SUBAGENTS_BROKER_ARGS;
+
   if (mode === "oauth-acceptance") {
     delete env.CLAUDE_ENV_FILE;
     delete env.CLAUDE_PLUGIN_ROOT;
@@ -74,7 +81,7 @@ export async function runClaudeDelegate(
     "--tools",
     options.profile.claude.tools.join(","),
     "--disallowedTools",
-    "Agent",
+    "Agent,TaskCreate,TaskGet,TaskUpdate,TaskDelete",
     "--strict-mcp-config",
     "--mcp-config",
     childMcpConfig,
