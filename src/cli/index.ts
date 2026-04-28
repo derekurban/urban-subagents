@@ -159,6 +159,17 @@ async function main() {
         broker.close();
       }
     });
+  sessions
+    .command("get")
+    .requiredOption("--session <sessionId>", "Session identifier")
+    .action((options: { session: string }) => {
+      const broker = new BrokerCore();
+      try {
+        printJson(broker.getSession(options.session));
+      } finally {
+        broker.close();
+      }
+    });
 
   program
     .command("delegate")
@@ -188,6 +199,19 @@ async function main() {
           ...request
         });
         printJson(result);
+      } finally {
+        broker.close();
+      }
+    });
+
+  const worker = program.command("worker", { hidden: true }).description("Internal broker worker commands.");
+  worker
+    .command("run")
+    .requiredOption("--job <jobPath>", "Delegate worker job file")
+    .action(async (options: { job: string }) => {
+      const broker = new BrokerCore();
+      try {
+        await broker.runDelegateWorker(options.job);
       } finally {
         broker.close();
       }

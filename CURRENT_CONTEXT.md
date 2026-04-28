@@ -43,6 +43,7 @@ The design moved from a task-centric API to a session-centric API.
 
 - `list_agents`
 - `list_sessions`
+- `get_session`
 - `delegate`
 - optional `cancel`
 
@@ -53,17 +54,15 @@ The design moved from a task-centric API to a session-centric API.
 
 There is no separate `followup` tool in the current direction.
 
-There is no core `wait` tool in the current direction because the broker is currently intended to run **sync-first**.
-
-If detached/background execution is added later, `wait` can be added as an extension.
+There is no core blocking `wait` tool in the current direction. Delegation is async-first: `delegate` starts the work and callers poll `get_session` or `list_sessions`.
 
 ## Execution Model
 
 ### v1
 
-- sync-first
+- async-first
 - stdio MCP server
-- spawn provider child processes directly
+- spawn provider child processes through broker worker jobs
 - no visible `cmd.exe` windows
 - persist broker session state locally
 
@@ -74,7 +73,7 @@ For one-shot runs:
 - Claude: `claude -p`
 - Codex: `codex exec --json`
 
-The subprocess exits when the run finishes, but the broker keeps:
+The delegate call returns once the worker starts. The worker exits when the provider run finishes, but the broker keeps:
 
 - broker `session_id`
 - provider session/thread handle
@@ -246,8 +245,7 @@ Suggested internal pieces:
 
 ## Open Questions
 
-1. Should `cancel` be included in v1, or wait until detached/background execution proves necessary?
-2. Should broker `session_id` map one-to-one to provider sessions, or can one broker session span multiple provider runs?
-3. What exact fields should `list_sessions` expose by default?
-4. How much provider-specific detail should be hidden versus surfaced for debugging?
-5. When should the Codex adapter escalate from `codex exec` to app-server automatically?
+1. Should broker `session_id` map one-to-one to provider sessions, or can one broker session span multiple provider runs?
+2. What exact fields should `list_sessions` expose by default?
+3. How much provider-specific detail should be hidden versus surfaced for debugging?
+4. When should the Codex adapter escalate from `codex exec` to app-server automatically?

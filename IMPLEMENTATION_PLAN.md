@@ -149,7 +149,8 @@ Uses `@modelcontextprotocol/sdk/server/stdio`. Registers four tools:
 |------|-------|--------|
 | `list_agents` | (none) | Array of `{name, description, runtime, permissions, supports_resume}` |
 | `list_sessions` | `{scope?: "current"\|"all", limit?: number}` | Array of session rows |
-| `delegate` | `{agent: string, prompt: string, session_id?: string, cwd?: string, context?: object}` | `{session_id, status, result, provider_handle, duration_ms}` |
+| `get_session` | `{session_id: string}` | Full session row, including result/error once terminal |
+| `delegate` | `{agent: string, prompt: string, session_id?: string, cwd?: string, context?: object}` | Full session row with `status: "running"` immediately after worker start |
 | `cancel` | `{session_id: string, reason?: string}` | `{session_id, status: "interrupted"}` |
 
 Tool descriptions include explicit "use this instead of the native Agent tool" language so the host has a broker-first replacement surface even when native subagent dispatch is disabled.
@@ -158,7 +159,7 @@ Session scoping: a broker process is spawned per host session. For interactive h
 
 ### Session store (`src/store/schema.sql`)
 
-SQLite WAL mode. One database at `~/.urban-subagents/sessions.db`. The provider's session UUID is the primary key.
+SQLite WAL mode. One database at `~/.urban-subagents/sessions.db`. The broker session UUID is the primary key; `provider_handle` stores the Claude session id or Codex thread/session id when known.
 
 ```sql
 CREATE TABLE sessions (
@@ -191,7 +192,7 @@ CREATE TABLE session_events (
 
 **Key acquisition flow:**
 - **Claude delegate**: broker calls `crypto.randomUUID()`, passes `--session-id <uuid>`, INSERTs the row with `status='running'` before `spawn()` returns. Row exists from the moment the subprocess starts.
-- **Codex delegate**: broker spawns `codex exec --json`, reads the first stream event to capture the Codex-generated thread/session handle, then INSERTs. Transient state (agent name, pid, cwd, parent info) is held in memory for the ~tens-of-ms gap. If the subprocess dies before emitting the handle, the delegate returns an error with no row written.
+- **Codex delegate**: broker creates the row before spawning the worker, then the worker updates `provider_handle` after `codex exec --json` emits the first thread/session event. If the subprocess dies before emitting the handle, the existing row transitions to `failed`.
 
 **Concurrency:** WAL mode lets multiple broker processes read simultaneously; writes serialize via SQLite's lock. `better-sqlite3` is synchronous and fits per-process use — each broker opens the DB on startup and closes on exit.
 
@@ -252,7 +253,7 @@ YAML at `~/.urban-subagents/config.yaml` (per-user default) overridable by `./.u
 ```yaml
 version: 0.1
 broker:
-  execution_mode: sync
+  execution_mode: async
   default_output: { format: text }
 
 agents:
@@ -284,6 +285,7 @@ agent-broker init [--host all|claude|codex] [--dry-run] [--force]
 agent-broker doctor [--verbose] [--fix]
 agent-broker agents list
 agent-broker sessions list [--scope current|all] [--agent NAME] [--status STATUS]
+agent-broker sessions get --session SESSION_ID
 agent-broker delegate --agent NAME [--session SESSION_ID] --prompt TEXT
 agent-broker cancel --session SESSION_ID [--reason TEXT]
 agent-broker reset [--force]        # wipes state DB and logs (explicit nuke only)

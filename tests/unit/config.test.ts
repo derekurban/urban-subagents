@@ -21,7 +21,7 @@ agents:
     );
 
     expect(config.version).toBe("0.1");
-    expect(config.broker.execution_mode).toBe("sync");
+    expect(config.broker.execution_mode).toBe("async");
     expect(config.broker.default_output.format).toBe("text");
     expect(config.agents.reviewer?.runtime).toBe("codex_exec");
     expect(config.agents.reviewer?.reasoning_effort).toBe("xhigh");

@@ -45,6 +45,7 @@ function ensureManagedDirectories(cwd: string): void {
   for (const target of [
     statePaths.homeDir,
     statePaths.backupsDir,
+    statePaths.jobsDir,
     statePaths.logsDir,
     statePaths.outputsDir,
     statePaths.promptsDir,

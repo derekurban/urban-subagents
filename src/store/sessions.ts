@@ -112,6 +112,18 @@ export class SessionStore {
       .run(pid, now(), sessionId);
   }
 
+  updateProviderHandle(sessionId: string, providerHandle: string | null): void {
+    this.db
+      .prepare(
+        `
+        UPDATE sessions
+        SET provider_handle = ?, updated_at = ?
+        WHERE session_id = ?
+      `,
+      )
+      .run(providerHandle, now(), sessionId);
+  }
+
   markSession(
     sessionId: string,
     status: SessionStatus,
@@ -146,6 +158,43 @@ export class SessionStore {
         result: fields.result ?? null,
         error: fields.error ?? null
       });
+  }
+
+  markSessionIfRunning(
+    sessionId: string,
+    status: Exclude<SessionStatus, "running">,
+    fields: {
+      durationMs?: number | null;
+      result?: string | null;
+      error?: string | null;
+    } = {},
+  ): boolean {
+    const result = this.db
+      .prepare(
+        `
+        UPDATE sessions
+        SET
+          status = @status,
+          updated_at = @updated_at,
+          ended_at = @ended_at,
+          pid = NULL,
+          duration_ms = @duration_ms,
+          result = @result,
+          error = @error
+        WHERE session_id = @session_id AND status = 'running'
+      `,
+      )
+      .run({
+        session_id: sessionId,
+        status,
+        updated_at: now(),
+        ended_at: now(),
+        duration_ms: fields.durationMs ?? null,
+        result: fields.result ?? null,
+        error: fields.error ?? null
+      });
+
+    return result.changes > 0;
   }
 
   getSession(sessionId: string): SessionRow | null {

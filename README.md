@@ -43,7 +43,7 @@ When a project config exists, it replaces the user config for commands run from 
 ```yaml
 version: 0.1
 broker:
-  execution_mode: sync
+  execution_mode: async
   default_output:
     format: text
 
@@ -68,7 +68,7 @@ agents:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `version` | No | Config format marker. Defaults to `0.1` when omitted. |
-| `broker.execution_mode` | No | Execution model for delegation. Only `sync` is supported in v1, and it is the default. |
+| `broker.execution_mode` | No | Execution model for delegation. Only `async` is supported in v1, and it is the default. Legacy `sync` values are accepted and normalized to `async`. |
 | `broker.default_output.format` | No | Default result format. Only `text` is supported in v1, and it is the default. |
 | `agents` | Yes | Map of named broker profiles exposed through `agents list`, MCP `list_agents`, and `delegate --agent <name>`. |
 
@@ -167,11 +167,14 @@ agent-broker init [--host all|claude|codex] [--dry-run] [--force] [--json]
 agent-broker doctor [--host all|claude|codex] [--verbose] [--fix] [--json]
 agent-broker agents list
 agent-broker sessions list [--scope current|all]
+agent-broker sessions get --session SESSION_ID
 agent-broker delegate --agent NAME --prompt TEXT [--session SESSION_ID] [--cwd DIR]
 agent-broker cancel --session SESSION_ID [--reason TEXT]
 agent-broker reset --force
 agent-broker serve-mcp --host-runtime <claude|codex>
 ```
+
+`delegate` is asynchronous. It starts a broker-managed child process and returns a running session immediately. Use `sessions get`, `sessions list`, MCP `get_session`, or MCP `list_sessions` to poll until the session reaches `completed`, `failed`, or `interrupted`.
 
 ## Development
 

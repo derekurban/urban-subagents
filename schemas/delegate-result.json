@@ -1,36 +1,76 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DelegateResult",
+  "title": "DelegateSession",
   "type": "object",
   "required": [
     "session_id",
-    "status",
-    "result",
     "provider_handle",
+    "runtime",
+    "parent_session_id",
+    "parent_runtime",
+    "agent",
+    "status",
+    "cwd",
+    "created_at",
+    "updated_at",
+    "ended_at",
+    "pid",
     "duration_ms",
-    "runtime"
+    "result",
+    "error"
   ],
   "properties": {
     "session_id": {
+      "type": "string"
+    },
+    "provider_handle": {
+      "type": ["string", "null"]
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["claude_code", "codex_exec"]
+    },
+    "parent_session_id": {
+      "type": ["string", "null"]
+    },
+    "parent_runtime": {
+      "type": ["string", "null"],
+      "enum": ["claude", "codex", null]
+    },
+    "agent": {
       "type": "string"
     },
     "status": {
       "type": "string",
       "enum": ["running", "idle", "completed", "failed", "interrupted"]
     },
-    "result": {
+    "cwd": {
       "type": "string"
     },
-    "provider_handle": {
-      "type": "string"
-    },
-    "duration_ms": {
+    "created_at": {
       "type": "integer",
       "minimum": 0
     },
-    "runtime": {
-      "type": "string",
-      "enum": ["claude_code", "codex_exec"]
+    "updated_at": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ended_at": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "pid": {
+      "type": ["integer", "null"]
+    },
+    "duration_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "result": {
+      "type": ["string", "null"]
+    },
+    "error": {
+      "type": ["string", "null"]
     }
   },
   "additionalProperties": false

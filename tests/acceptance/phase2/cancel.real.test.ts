@@ -8,8 +8,6 @@ import {
   isAcceptanceEnabled,
   readSessionEvents,
   runBrokerCliJson,
-  spawnBrokerCli,
-  waitForRunningSessionWithPid,
   waitForSessionStatus,
   type Provider,
 } from "../support/harness.js";
@@ -17,6 +15,11 @@ import {
 interface CancelResult {
   session_id: string;
   status: "interrupted";
+}
+
+interface DelegateResult {
+  session_id: string;
+  status: "running";
 }
 
 describe("phase 2 cancel acceptance", () => {
@@ -30,7 +33,7 @@ describe("phase 2 cancel acceptance", () => {
         const agent = getDefaultAgentForProvider(provider);
         await runBrokerCliJson(context, ["init", "--host", provider, "--force", "--json"]);
 
-        const delegate = spawnBrokerCli(
+        const delegate = await runBrokerCliJson<DelegateResult>(
           context,
           [
             "delegate",
@@ -42,27 +45,24 @@ describe("phase 2 cancel acceptance", () => {
           { env: createProxyEnv(context, provider, 4000) },
         );
 
-        const running = await waitForRunningSessionWithPid(context, agent, 30000);
         const cancelled = await runBrokerCliJson<CancelResult>(context, [
           "cancel",
           "--session",
-          String(running.session_id),
+          delegate.session_id,
           "--reason",
           "Acceptance cancel test"
         ]);
 
         expect(cancelled.status).toBe("interrupted");
-
-        await delegate.completion;
         const session = await waitForSessionStatus(
           context,
-          String(running.session_id),
+          delegate.session_id,
           ["interrupted"],
           30000,
         );
 
         expect(session.status).toBe("interrupted");
-        const events = readSessionEvents(context, String(running.session_id));
+        const events = readSessionEvents(context, delegate.session_id);
         expect(events.some((event) => event.kind === "cancel")).toBe(true);
       } finally {
         context.cleanup();

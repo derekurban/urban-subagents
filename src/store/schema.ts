@@ -1,7 +1,7 @@
 export const SESSION_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS sessions (
   session_id TEXT PRIMARY KEY,
-  provider_handle TEXT NOT NULL,
+  provider_handle TEXT,
   runtime TEXT NOT NULL,
   parent_session_id TEXT,
   parent_runtime TEXT,

@@ -27,7 +27,7 @@ describe("resolveAgentProfiles", () => {
       source: "user",
       version: "0.1",
       broker: {
-        execution_mode: "sync",
+        execution_mode: "async",
         default_output: {
           format: "text"
         }
@@ -61,7 +61,7 @@ describe("resolveAgentProfiles", () => {
       source: "user",
       version: "0.1",
       broker: {
-        execution_mode: "sync",
+        execution_mode: "async",
         default_output: {
           format: "text"
         }

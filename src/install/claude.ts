@@ -107,6 +107,7 @@ Instead:
 1. Call \`mcp__urban-subagents__list_agents\` to inspect the available broker-managed profiles.
 2. Choose the best matching profile for the task.
 3. Call \`mcp__urban-subagents__delegate\` with that \`agent\` name and a focused delegated prompt.
+4. Treat the returned session as asynchronous. Poll \`mcp__urban-subagents__get_session\` or \`mcp__urban-subagents__list_sessions\` until the session is \`completed\`, \`failed\`, or \`interrupted\`.
 
 Do not treat \`TaskCreate\`, \`TaskGet\`, \`TaskList\`, \`TaskOutput\`, \`TaskStop\`, or \`TaskUpdate\` as a replacement for broker delegation.
 ${CLAUDE_BLOCK_END}`;

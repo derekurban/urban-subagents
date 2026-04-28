@@ -28,7 +28,7 @@ export interface RawAgentProfile {
 export interface RawBrokerConfig {
   version?: string | number;
   broker?: {
-    execution_mode?: "sync";
+    execution_mode?: "async" | "sync";
     default_output?: {
       format?: "text";
     };
@@ -41,7 +41,7 @@ export interface BrokerConfig {
   source: "user" | "project";
   version: string;
   broker: {
-    execution_mode: "sync";
+    execution_mode: "async";
     default_output: {
       format: "text";
     };
@@ -78,7 +78,7 @@ export interface DelegateRequest {
   context?: Record<string, unknown>;
 }
 
-export interface DelegateResult {
+export interface DelegateCompletionResult {
   session_id: string;
   status: SessionStatus;
   result: string;
@@ -87,13 +87,9 @@ export interface DelegateResult {
   runtime: Runtime;
 }
 
-export type DelegateManyItem =
-  | { ok: true; result: DelegateResult }
-  | { ok: false; agent: string; error: string };
-
 export interface SessionRow {
   session_id: string;
-  provider_handle: string;
+  provider_handle: string | null;
   runtime: Runtime;
   parent_session_id: string | null;
   parent_runtime: HostRuntime;
@@ -118,7 +114,7 @@ export interface ListSessionsOptions {
 
 export interface CreateSessionInput {
   session_id: string;
-  provider_handle: string;
+  provider_handle: string | null;
   runtime: Runtime;
   parent_session_id: string | null;
   parent_runtime: HostRuntime;

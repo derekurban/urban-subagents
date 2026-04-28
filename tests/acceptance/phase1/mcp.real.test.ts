@@ -40,7 +40,7 @@ describe("phase 1 real MCP acceptance", () => {
       try {
         const tools = await client.listTools();
         expect(tools.tools.map((tool) => tool.name)).toEqual(
-          expect.arrayContaining(["list_agents", "list_sessions", "delegate", "cancel"]),
+          expect.arrayContaining(["list_agents", "list_sessions", "get_session", "delegate", "cancel"]),
         );
 
         const response = await client.callTool({
@@ -54,6 +54,7 @@ describe("phase 1 real MCP acceptance", () => {
         const responseText = JSON.stringify(response.structuredContent ?? response.content ?? response);
         expect(responseText.length).toBeGreaterThan(0);
         expect(responseText).toContain("session_id");
+        expect(responseText).toContain("running");
       } finally {
         await transport.close();
       }

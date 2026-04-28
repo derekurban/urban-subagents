@@ -5,17 +5,17 @@ import {
   getDefaultAgentForProvider,
   getEnabledProviders,
   isAcceptanceEnabled,
-  readSession,
   runBrokerCliJson,
+  waitForSessionStatus,
   type Provider,
 } from "../support/harness.js";
 
 interface DelegateResult {
   session_id: string;
   status: "completed" | "interrupted" | "failed" | "running" | "idle";
-  result: string;
-  provider_handle: string;
-  duration_ms: number;
+  result: string | null;
+  provider_handle: string | null;
+  duration_ms: number | null;
   runtime: "claude_code" | "codex_exec";
 }
 
@@ -28,7 +28,7 @@ describe("phase 1 real delegate acceptance", () => {
     const providerIt =
       isAcceptanceEnabled() && getEnabledProviders().includes(provider) ? it : it.skip;
 
-    providerIt(`delegates through ${provider} and persists the completed session`, async () => {
+    providerIt(`starts an async ${provider} delegate and persists the completed session`, async () => {
       const context = createAcceptanceContext(`delegate-${provider}`);
       try {
         const agent = getDefaultAgentForProvider(provider);
@@ -42,15 +42,21 @@ describe("phase 1 real delegate acceptance", () => {
           "Reply with a short acceptance-test confirmation."
         ]);
 
-        expect(result.status).toBe("completed");
+        expect(result.status).toBe("running");
         expect(result.runtime).toBe(runtimeForProvider(provider));
-        expect(result.result.trim().length).toBeGreaterThan(0);
+        expect(result.result).toBeNull();
 
-        const session = readSession(context, result.session_id);
+        const session = await waitForSessionStatus(
+          context,
+          result.session_id,
+          ["completed"],
+          60000,
+        );
         expect(session).not.toBeNull();
         expect(session?.status).toBe("completed");
         expect(session?.agent).toBe(agent);
         expect(session?.runtime).toBe(runtimeForProvider(provider));
+        expect(String(session?.result ?? "").trim().length).toBeGreaterThan(0);
       } finally {
         context.cleanup();
       }

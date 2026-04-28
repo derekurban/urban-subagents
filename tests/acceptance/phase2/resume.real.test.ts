@@ -7,6 +7,7 @@ import {
   isAcceptanceEnabled,
   readSessionEvents,
   runBrokerCliJson,
+  waitForSessionStatus,
   type Provider,
 } from "../support/harness.js";
 
@@ -34,6 +35,7 @@ describe("phase 2 real resume acceptance", () => {
           "--prompt",
           "Reply with a short initial message."
         ]);
+        await waitForSessionStatus(context, first.session_id, ["completed"], 60000);
         const second = await runBrokerCliJson<DelegateResult>(context, [
           "delegate",
           "--agent",
@@ -45,7 +47,8 @@ describe("phase 2 real resume acceptance", () => {
         ]);
 
         expect(second.session_id).toBe(first.session_id);
-        expect(second.status).toBe("completed");
+        expect(second.status).toBe("running");
+        await waitForSessionStatus(context, first.session_id, ["completed"], 60000);
 
         const events = readSessionEvents(context, first.session_id);
         expect(events.some((event) => event.kind === "resume")).toBe(true);

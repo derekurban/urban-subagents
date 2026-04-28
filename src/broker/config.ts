@@ -27,7 +27,7 @@ const rawConfigSchema = z.object({
   version: z.union([z.string(), z.number()]).optional(),
   broker: z
     .object({
-      execution_mode: z.literal("sync").optional(),
+      execution_mode: z.enum(["async", "sync"]).optional(),
       default_output: z
         .object({
           format: z.literal("text").optional()
@@ -60,7 +60,7 @@ export function parseBrokerConfig(raw: string, sourcePath: string, source: "proj
     source,
     version: String(data.version ?? "0.1"),
     broker: {
-      execution_mode: data.broker?.execution_mode ?? "sync",
+      execution_mode: "async",
       default_output: {
         format: data.broker?.default_output?.format ?? "text"
       }

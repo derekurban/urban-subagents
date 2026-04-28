@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { AgentProfile, BrokerEnvironment, DelegateRequest, DelegateResult } from "../broker/types.js";
+import type { AgentProfile, BrokerEnvironment, DelegateCompletionResult, DelegateRequest } from "../broker/types.js";
 import { SessionStore } from "../store/sessions.js";
 import { createLogger } from "../util/logging.js";
 import { getStatePaths } from "../util/paths.js";
@@ -18,6 +18,9 @@ export interface ClaudeAdapterOptions {
   request: DelegateRequest;
   cwd: string;
   command?: string;
+  sessionId?: string;
+  providerHandle?: string | null;
+  resume?: boolean;
   brokerEnvironment: BrokerEnvironment;
   sessionStore: SessionStore;
 }
@@ -59,10 +62,10 @@ export function buildClaudeEnv(mode: ClaudeExecutionMode): NodeJS.ProcessEnv {
 
 export async function runClaudeDelegate(
   options: ClaudeAdapterOptions,
-): Promise<DelegateResult> {
+): Promise<DelegateCompletionResult> {
   const logger = createLogger("claude-adapter");
-  const sessionId = options.request.session_id ?? randomUUID();
-  const isResume = Boolean(options.request.session_id);
+  const sessionId = options.sessionId ?? options.request.session_id ?? randomUUID();
+  const isResume = options.resume ?? Boolean(options.request.session_id);
   const command = options.command ?? process.env.BROKER_CLAUDE_BIN ?? "claude";
   const mode = getClaudeExecutionMode();
   const promptAppend = readPromptFile(options.profile.promptFilePath);
@@ -94,10 +97,11 @@ export async function runClaudeDelegate(
     options.profile.claude.permissionMode,
   ];
 
+  const providerHandle = options.providerHandle ?? sessionId;
   if (isResume) {
-    args.push("--resume", sessionId);
+    args.push("--resume", providerHandle);
   } else {
-    args.push("--session-id", sessionId);
+    args.push("--session-id", providerHandle);
   }
 
   let spawnedPid: number | null = null;
@@ -105,7 +109,7 @@ export async function runClaudeDelegate(
   if (!isResume) {
     options.sessionStore.createRunningSession({
       session_id: sessionId,
-      provider_handle: sessionId,
+      provider_handle: providerHandle,
       runtime: "claude_code",
       parent_session_id: options.brokerEnvironment.hostSessionId,
       parent_runtime: options.brokerEnvironment.hostRuntime,
@@ -133,7 +137,7 @@ export async function runClaudeDelegate(
       spawnedPid = pid;
       options.sessionStore.createRunningSession({
         session_id: sessionId,
-        provider_handle: sessionId,
+        provider_handle: providerHandle,
         runtime: "claude_code",
         parent_session_id: options.brokerEnvironment.hostSessionId,
         parent_runtime: options.brokerEnvironment.hostRuntime,
@@ -147,7 +151,7 @@ export async function runClaudeDelegate(
     }
   });
 
-  const interruptedResult = (partialResult?: string): DelegateResult | null => {
+  const interruptedResult = (partialResult?: string): DelegateCompletionResult | null => {
     const session = options.sessionStore.getSession(sessionId);
     if (session?.status !== "interrupted") {
       return null;
@@ -161,7 +165,7 @@ export async function runClaudeDelegate(
 
     return {
       session_id: sessionId,
-      provider_handle: session.provider_handle,
+      provider_handle: session.provider_handle ?? providerHandle,
       status: "interrupted",
       result: session.result ?? partialResult ?? "",
       duration_ms: result.durationMs,
@@ -182,7 +186,7 @@ export async function runClaudeDelegate(
     }
 
     const message = result.stderr || "Claude produced no JSON output.";
-    options.sessionStore.markSession(sessionId, "failed", {
+    options.sessionStore.markSessionIfRunning(sessionId, "failed", {
       durationMs: result.durationMs,
       error: message
     });
@@ -198,14 +202,15 @@ export async function runClaudeDelegate(
       return interrupted;
     }
 
-    options.sessionStore.markSession(sessionId, "failed", {
+    options.sessionStore.markSessionIfRunning(sessionId, "failed", {
       durationMs: result.durationMs,
       error: `Failed to parse Claude JSON output: ${(error as Error).message}`
     });
     throw error;
   }
 
-  const providerHandle = String(parsed.session_id ?? sessionId);
+  const parsedProviderHandle = String(parsed.session_id ?? providerHandle);
+  options.sessionStore.updateProviderHandle(sessionId, parsedProviderHandle);
   const textResult =
     typeof parsed.result === "string"
       ? parsed.result
@@ -218,7 +223,7 @@ export async function runClaudeDelegate(
     }
 
     const message = result.stderr || `Claude exited with code ${result.exitCode}.`;
-    options.sessionStore.markSession(sessionId, "failed", {
+    options.sessionStore.markSessionIfRunning(sessionId, "failed", {
       durationMs: result.durationMs,
       error: message,
       result: textResult
@@ -231,7 +236,7 @@ export async function runClaudeDelegate(
     throw new Error(message);
   }
 
-  options.sessionStore.markSession(sessionId, "completed", {
+  options.sessionStore.markSessionIfRunning(sessionId, "completed", {
     durationMs: result.durationMs,
     result: textResult
   });
@@ -243,7 +248,7 @@ export async function runClaudeDelegate(
 
   return {
     session_id: sessionId,
-    provider_handle: providerHandle,
+    provider_handle: parsedProviderHandle,
     status: "completed",
     result: textResult,
     duration_ms: result.durationMs,

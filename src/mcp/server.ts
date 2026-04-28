@@ -130,14 +130,16 @@ export async function serveMcp(
   };
 
   server.registerTool(
-    "delegate",
+    "get_session",
     {
       description:
-        "Delegate work to a single broker-managed child agent. Use this instead of the native Agent tool or native subagent APIs. When you have multiple independent tasks, prefer delegate_many so they run concurrently — calling delegate sequentially will block.",
-      inputSchema: delegateRequestSchema
+        "Fetch one broker-managed session by session_id. Use this after delegate to poll for completed, failed, or interrupted results.",
+      inputSchema: {
+        session_id: z.string()
+      }
     },
-    async (args) => {
-      const result = await broker.delegate(normalizeDelegateArgs(args));
+    async ({ session_id }) => {
+      const result = broker.getSession(session_id);
       return {
         content: [{ type: "text", text: toolText(result) }],
         structuredContent: { ...result }
@@ -146,20 +148,17 @@ export async function serveMcp(
   );
 
   server.registerTool(
-    "delegate_many",
+    "delegate",
     {
       description:
-        "Delegate multiple independent tasks to broker-managed child agents in a single tool call. All children run concurrently; the tool returns once every child has finished. Use this whenever you would otherwise issue several delegate calls in a row — this is the only way to get true parallelism, because the host MCP client serializes separate tool calls to the same server. Each item succeeds or fails independently; partial failures do not abort the batch.",
-      inputSchema: {
-        requests: z.array(z.object(delegateRequestSchema)).min(1).max(16)
-      }
+        "Start asynchronous work in a broker-managed child agent. This returns a running session immediately; poll get_session or list_sessions for completed, failed, or interrupted results. Use this instead of native host Agent or spawn_agent tooling.",
+      inputSchema: delegateRequestSchema
     },
     async (args) => {
-      const requests = args.requests.map(normalizeDelegateArgs);
-      const results = await broker.delegateMany(requests);
+      const result = await broker.delegate(normalizeDelegateArgs(args));
       return {
-        content: [{ type: "text", text: toolText(results) }],
-        structuredContent: { results }
+        content: [{ type: "text", text: toolText(result) }],
+        structuredContent: { ...result }
       };
     },
   );

@@ -61,6 +61,7 @@ Required flow:
 1. Run \`mcp__urban-subagents__list_agents\` to inspect available profiles.
 2. Choose the best matching profile.
 3. Run \`mcp__urban-subagents__delegate\` with that \`agent\` name and a focused delegated prompt.
+4. The delegate call returns a running session immediately. Poll \`mcp__urban-subagents__get_session\` or \`mcp__urban-subagents__list_sessions\` until the session is \`completed\`, \`failed\`, or \`interrupted\`.
 
 Do not claim delegation is unavailable when the broker MCP tools are present.
 Do not use \`spawn_agent\`, \`send_input\`, \`resume_agent\`, \`wait_agent\`, or \`close_agent\`.

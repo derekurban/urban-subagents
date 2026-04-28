@@ -1,4 +1,4 @@
-import type { AgentProfile, BrokerEnvironment, DelegateRequest, DelegateResult } from "../broker/types.js";
+import type { AgentProfile, BrokerEnvironment, DelegateCompletionResult, DelegateRequest } from "../broker/types.js";
 import { SessionStore } from "../store/sessions.js";
 import { createLogger } from "../util/logging.js";
 import { getStatePaths } from "../util/paths.js";
@@ -65,6 +65,9 @@ export interface CodexAdapterOptions {
   request: DelegateRequest;
   cwd: string;
   command?: string;
+  sessionId?: string;
+  providerHandle?: string | null;
+  resume?: boolean;
   brokerEnvironment: BrokerEnvironment;
   sessionStore: SessionStore;
 }
@@ -109,7 +112,7 @@ async function waitForInterruptedSession(
 
 export async function runCodexDelegate(
   options: CodexAdapterOptions,
-): Promise<DelegateResult> {
+): Promise<DelegateCompletionResult> {
   const logger = createLogger("codex-adapter");
   const command = options.command ?? process.env.BROKER_CODEX_BIN ?? "codex";
   const prompt = buildCodexPrompt(options.profile, options.request.prompt);
@@ -117,7 +120,7 @@ export async function runCodexDelegate(
     getStatePaths(options.cwd).outputsDir,
     `codex-${options.profile.name}`,
   );
-  const isResume = Boolean(options.request.session_id);
+  const isResume = options.resume ?? Boolean(options.request.session_id);
   const sharedArgs = [
     "--json",
     "-o",
@@ -143,11 +146,17 @@ export async function runCodexDelegate(
     "--skip-git-repo-check",
   ];
 
+  const resumeHandle = options.providerHandle ?? options.request.session_id ?? null;
+  if (isResume && !resumeHandle) {
+    throw new Error("Codex resume requires a provider handle.");
+  }
+
   const args = isResume
-    ? ["exec", "resume", ...sharedArgs, options.request.session_id!, "-"]
+    ? ["exec", "resume", ...sharedArgs, resumeHandle!, "-"]
     : ["exec", ...sharedArgs, "-"];
 
-  let sessionId: string | null = options.request.session_id ?? null;
+  let sessionId: string | null = options.sessionId ?? options.request.session_id ?? null;
+  let providerHandle: string | null = resumeHandle;
   let rowCreated = false;
   let spawnedPid: number | null = null;
 
@@ -162,7 +171,7 @@ export async function runCodexDelegate(
       if (sessionId && !rowCreated) {
         options.sessionStore.createRunningSession({
           session_id: sessionId,
-          provider_handle: sessionId,
+          provider_handle: providerHandle,
           runtime: "codex_exec",
           parent_session_id: options.brokerEnvironment.hostSessionId,
           parent_runtime: options.brokerEnvironment.hostRuntime,
@@ -181,6 +190,12 @@ export async function runCodexDelegate(
     onStdoutLine(line) {
       const events = parseJsonLines(line);
       const detected = extractSessionId(events);
+      if (detected && !providerHandle) {
+        providerHandle = detected;
+        if (sessionId) {
+          options.sessionStore.updateProviderHandle(sessionId, providerHandle);
+        }
+      }
       if (detected && !sessionId) {
         sessionId = detected;
       }
@@ -188,7 +203,7 @@ export async function runCodexDelegate(
       if (sessionId && !rowCreated) {
         options.sessionStore.createRunningSession({
           session_id: sessionId,
-          provider_handle: sessionId,
+          provider_handle: providerHandle,
           runtime: "codex_exec",
           parent_session_id: options.brokerEnvironment.hostSessionId,
           parent_runtime: options.brokerEnvironment.hostRuntime,
@@ -210,17 +225,25 @@ export async function runCodexDelegate(
   });
 
   const events = parseJsonLines(result.stdout);
-  sessionId = sessionId ?? extractSessionId(events);
+  const detectedSession = extractSessionId(events);
+  providerHandle = providerHandle ?? detectedSession;
+  sessionId = sessionId ?? detectedSession;
+  if (sessionId && providerHandle) {
+    options.sessionStore.updateProviderHandle(sessionId, providerHandle);
+  }
   const textResult = readIfExists(captureFile).trim();
 
   if (!sessionId) {
     throw new Error(result.stderr || "Codex did not emit a session ID.");
   }
+  if (!providerHandle) {
+    throw new Error(result.stderr || "Codex did not emit a provider handle.");
+  }
 
   if (!rowCreated) {
     options.sessionStore.createRunningSession({
       session_id: sessionId,
-      provider_handle: sessionId,
+      provider_handle: providerHandle,
       runtime: "codex_exec",
       parent_session_id: options.brokerEnvironment.hostSessionId,
       parent_runtime: options.brokerEnvironment.hostRuntime,
@@ -250,7 +273,7 @@ export async function runCodexDelegate(
 
       return {
         session_id: sessionId,
-        provider_handle: interruptedSession.provider_handle,
+        provider_handle: interruptedSession.provider_handle ?? providerHandle,
         status: "interrupted",
         result: interruptedResult ?? "",
         duration_ms: result.durationMs,
@@ -259,7 +282,7 @@ export async function runCodexDelegate(
     }
 
     const message = result.stderr || `Codex exited with code ${result.exitCode}.`;
-    options.sessionStore.markSession(sessionId, "failed", {
+    options.sessionStore.markSessionIfRunning(sessionId, "failed", {
       durationMs: result.durationMs,
       error: message,
       result: textResult || null
@@ -272,7 +295,7 @@ export async function runCodexDelegate(
     throw new Error(message);
   }
 
-  options.sessionStore.markSession(sessionId, "completed", {
+  options.sessionStore.markSessionIfRunning(sessionId, "completed", {
     durationMs: result.durationMs,
     result: textResult
   });
@@ -284,7 +307,7 @@ export async function runCodexDelegate(
 
   return {
     session_id: sessionId,
-    provider_handle: sessionId,
+    provider_handle: providerHandle,
     status: "completed",
     result: textResult,
     duration_ms: result.durationMs,

@@ -9,6 +9,7 @@ export interface StatePaths {
   homeDir: string;
   backupsDir: string;
   dbPath: string;
+  jobsDir: string;
   logsDir: string;
   outputsDir: string;
   promptsDir: string;
@@ -66,6 +67,7 @@ export function getStatePaths(cwd = process.cwd()): StatePaths {
     homeDir,
     backupsDir: path.join(homeDir, "backups"),
     dbPath: path.join(homeDir, "sessions.db"),
+    jobsDir: path.join(homeDir, "jobs"),
     logsDir: path.join(homeDir, "logs"),
     outputsDir: path.join(homeDir, "outputs"),
     promptsDir: path.join(homeDir, "prompts"),

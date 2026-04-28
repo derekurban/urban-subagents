@@ -42,7 +42,6 @@ describe("broker MCP end-to-end", () => {
         "list_agents",
         "list_sessions",
         "delegate",
-        "delegate_many",
         "cancel"
       ]),
     );
@@ -54,31 +53,37 @@ describe("broker MCP end-to-end", () => {
         prompt: "Inspect the workspace"
       }
     });
-    expect(JSON.stringify(delegate)).toContain("Codex handled");
+    const sessionId = (
+      delegate as { structuredContent?: { session_id?: string; status?: string } }
+    ).structuredContent?.session_id;
+    expect(sessionId).toBeTruthy();
+    expect(
+      (delegate as { structuredContent?: { status?: string } }).structuredContent?.status,
+    ).toBe("running");
 
-    const batchStart = Date.now();
-    const batch = await client.callTool({
-      name: "delegate_many",
-      arguments: {
-        requests: [
-          { agent: "reviewer", prompt: "A" },
-          { agent: "reviewer", prompt: "B" },
-          { agent: "reviewer", prompt: "C" }
-        ]
+    const deadline = Date.now() + 30000;
+    let completed: unknown = null;
+    while (Date.now() < deadline) {
+      const session = await client.callTool({
+        name: "get_session",
+        arguments: {
+          session_id: sessionId
+        }
+      });
+      const structured = (
+        session as { structuredContent?: { status?: string; result?: string; error?: string } }
+      ).structuredContent;
+      if (structured?.status === "completed") {
+        completed = session;
+        break;
       }
-    });
-    const batchDuration = Date.now() - batchStart;
+      if (structured?.status === "failed" || structured?.status === "interrupted") {
+        throw new Error(`Session ended with ${structured.status}: ${structured.error ?? ""}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
-    const batchStructured = (batch as { structuredContent?: { results?: unknown[] } })
-      .structuredContent;
-    expect(batchStructured?.results).toHaveLength(3);
-    expect(JSON.stringify(batch)).toContain("Codex handled");
-
-    const singleDuration = (
-      (delegate as { structuredContent?: { duration_ms?: number } }).structuredContent
-        ?.duration_ms
-    ) ?? 0;
-    expect(batchDuration).toBeLessThan(singleDuration * 3);
+    expect(JSON.stringify(completed)).toContain("Codex handled");
 
     await transport.close();
   });

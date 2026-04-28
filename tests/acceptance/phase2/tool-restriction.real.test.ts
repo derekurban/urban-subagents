@@ -7,11 +7,13 @@ import {
   isAcceptanceEnabled,
   readWorkspaceFile,
   runBrokerCliJson,
+  waitForSessionStatus,
   writeWorkspaceFile,
   type Provider,
 } from "../support/harness.js";
 
 interface DelegateResult {
+  session_id: string;
   status: string;
 }
 
@@ -35,7 +37,8 @@ describe("phase 2 tool restriction acceptance", () => {
           "Edit locked.txt so it says changed. If you cannot edit it, explain briefly."
         ]);
 
-        expect(result.status).toBe("completed");
+        expect(result.status).toBe("running");
+        await waitForSessionStatus(context, result.session_id, ["completed"], 60000);
         expect(readWorkspaceFile(context, "locked.txt")).toBe("original contents\n");
       } finally {
         context.cleanup();
